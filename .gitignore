@@ -1,0 +1,141 @@
+# ============================================================
+# SynapsePlane — .gitignore
+# ============================================================
+
+# ── Markdown documentation (tracked internally, not in Git) ──
+# All .md files are excluded EXCEPT README.md
+*.md
+!README.md
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyTest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+nosetests.xml
+
+# MyPy / type-checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Ruff / Black cache
+.ruff_cache/
+
+# ── Secrets & environment ────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+google_credentials.json
+token.json
+oauth_token.json
+*_secret*
+*_token*
+
+# ── Node / Frontend ──────────────────────────────────────────
+node_modules/
+dist/
+.next/
+.nuxt/
+.output/
+.cache/
+.parcel-cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.turbo/
+*.tsbuildinfo
+
+# ── Docker ───────────────────────────────────────────────────
+.docker/
+
+# ── Database ─────────────────────────────────────────────────
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+postgres-data/
+pgdata/
+
+# ── IDE & editors ────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+Thumbs.db
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+*.pid
+
+# ── Test artifacts ───────────────────────────────────────────
+tests/fixtures/generated/
+tests/output/
+
+# ── Local demo recordings ────────────────────────────────────
+demo/recordings/
+demo/screenshots/
+
+# ── Jupyter ──────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Misc ─────────────────────────────────────────────────────
+*.bak
+*.tmp
