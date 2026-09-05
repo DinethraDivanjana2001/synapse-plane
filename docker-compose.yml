@@ -1,7 +1,7 @@
 services:
   # ── PostgreSQL database ──────────────────────────────────────
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: synapse_db
     environment:
       POSTGRES_USER: synapse

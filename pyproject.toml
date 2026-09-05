@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "synapse-plane"
 version = "0.1.0"
-description = "A stateful, human-governed execution plane for multi-agent AI workflows."
+description = "A context-aware agentic execution plane with persistent memory, hybrid RAG, and human-governed workflow execution."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -26,6 +26,9 @@ dependencies = [
     # Validation and serialization
     "pydantic>=2.8.0",
     "pydantic-settings>=2.4.0",
+
+    # Vector database (pgvector)
+    "pgvector>=0.3.0",
 
     # Database
     "sqlalchemy>=2.0.35",
