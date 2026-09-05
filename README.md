@@ -231,26 +231,10 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) section 11 for the full scale
 
 ---
 
-## AI-assisted development
 
-This project was built with the assistance of Cursor (Claude), Antigravity (Google DeepMind), and Claude Code. All AI-generated code was reviewed, tested, and committed by the human developer.
+## Architecture
 
-See [`AI_USAGE.md`](AI_USAGE.md) for a transparent explanation of what AI generated, what was human-directed, and how output was verified.
-
----
-
-## Documentation
-
-| Document | Purpose |
-|----------|---------|
-| [`docs/PROJECT_SCOPE.md`](docs/PROJECT_SCOPE.md) | Full project scope and four-day strategy |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture, layer design, data flows |
-| [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | Structured functional and non-functional requirements |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Day-by-day delivery plan and exit criteria |
-| [`docs/PROGRESS.md`](docs/PROGRESS.md) | Live completion status |
-| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Architecture decision records |
-| [`AGENTS.md`](AGENTS.md) | Context file for AI coding assistants |
-| [`AI_USAGE.md`](AI_USAGE.md) | AI methodology disclosure |
+See the full architecture design, layer responsibilities, data flows, and scale story in the project documentation under `docs/`.
 
 ---
 
