@@ -2,6 +2,10 @@
 # SynapsePlane — .gitignore
 # ============================================================
 
+# ── Private working files (never push to GitHub) ────────────
+# ChatGPT conversations, personal instructions, raw notes
+instruction/
+
 # ── Markdown documentation (tracked internally, not in Git) ──
 # All .md files are excluded EXCEPT README.md
 *.md
@@ -139,4 +143,3 @@ demo/screenshots/
 # ── Misc ─────────────────────────────────────────────────────
 *.bak
 *.tmp
-instruction/
