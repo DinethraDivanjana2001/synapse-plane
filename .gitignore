@@ -6,10 +6,14 @@
 # ChatGPT conversations, personal instructions, raw notes
 instruction/
 
-# ── Markdown documentation (tracked internally, not in Git) ──
-# All .md files are excluded EXCEPT README.md
+# ── Markdown documentation ───────────────────────────────────
+# Private working .md files in docs/ are excluded (internal notes)
+# AI coding context files at root are TRACKED (needed by Cursor/Claude)
 *.md
 !README.md
+!AGENTS.md
+!PROJECT_CONTEXT.md
+!CLAUDE.md
 
 # ── Python ──────────────────────────────────────────────────
 __pycache__/
