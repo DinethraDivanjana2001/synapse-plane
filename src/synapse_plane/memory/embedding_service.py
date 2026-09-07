@@ -1,7 +1,4 @@
-"""Embedding generation. FakeEmbeddingService is used everywhere in tests and
-in the demo seed script so no live OpenAI calls are ever required to build
-or verify this project (docs/AGENTS.md NFR-006, docs/DECISIONS.md).
-"""
+"""Embedding generation — real (OpenAI) and fake (deterministic, tests/demo)."""
 
 import hashlib
 import random
@@ -17,7 +14,7 @@ class EmbeddingServiceProtocol(Protocol):
 
 
 class EmbeddingService:
-    """Real OpenAI text-embedding-3-small backed implementation."""
+    """Real OpenAI-backed implementation."""
 
     def __init__(self, client: object, model: str = "text-embedding-3-small"):
         self.client = client
@@ -31,11 +28,7 @@ class EmbeddingService:
 
 
 class FakeEmbeddingService:
-    """Deterministic hash-seeded fake vector — no network calls.
-
-    Same input text always produces the same vector, so cosine-similarity
-    behaviour is exercisable in tests without an OpenAI key.
-    """
+    """Deterministic hash-seeded fake vector — no network calls."""
 
     model = "fake-embedding-v1"
 

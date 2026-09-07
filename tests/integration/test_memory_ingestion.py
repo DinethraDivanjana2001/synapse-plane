@@ -1,6 +1,4 @@
-"""Integration tests for memory ingestion and hybrid retrieval.
-Real DB (in-memory SQLite), Fake extractor/embeddings — no external I/O.
-"""
+"""Integration tests for memory ingestion and hybrid retrieval."""
 
 from synapse_plane.config import Settings
 from synapse_plane.memory.embedding_service import FakeEmbeddingService
@@ -10,8 +8,6 @@ from synapse_plane.retrieval.context_retriever import HybridContextRetriever
 
 USER_ID = "user-1"
 
-# A mix of relevant (restaurant/Maya/dinner) and irrelevant notes — the
-# retriever must tell them apart, not just return everything.
 RELEVANT_NOTES = [
     "I prefer quiet restaurants over lively, noisy ones",
     "Maya is my colleague and she loves Italian food",
@@ -49,10 +45,7 @@ _KEYWORDS = [
 
 
 class KeywordEmbeddingService:
-    """Deterministic bag-of-keywords 'embedding' — unlike FakeEmbeddingService
-    (random hash-seeded, used elsewhere), this one gives meaningful cosine
-    similarity so semantic-search assertions here aren't flaky. Test-only;
-    never used in application code."""
+    """Deterministic bag-of-keywords fake embedding, test-only."""
 
     model = "keyword-fake-v1"
 

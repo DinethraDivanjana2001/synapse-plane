@@ -1,9 +1,4 @@
-"""State enums shared across the domain layer.
-
-These are the only vocabulary allowed for execution/task state, risk
-classification, memory typing, and agent trust/health. No other layer may
-invent new string values for these concepts.
-"""
+"""State enums shared across the domain layer."""
 
 from enum import StrEnum
 

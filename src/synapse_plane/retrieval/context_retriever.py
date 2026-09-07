@@ -1,11 +1,5 @@
-"""Hybrid context retrieval: semantic (pgvector) + explicit preferences +
-entity-graph expansion, combined by one scoring formula and trimmed to a
-token budget. See docs/MEMORY_AND_RAG.md for the design rationale.
-
-This is deliberately NOT an LLM call — it is the deterministic half of the
-Context Intelligence Agent's job (docs/AGENT_CATALOGUE.md). The agent itself
-(Step 4) wraps this retriever plus intent interpretation and re-ranking.
-"""
+"""Hybrid context retrieval: semantic search + explicit preferences +
+entity-graph expansion, scored and trimmed to a token budget."""
 
 from datetime import UTC, datetime
 
@@ -18,8 +12,7 @@ from synapse_plane.persistence.repositories import (
 )
 from synapse_plane.retrieval.context_package_builder import ContextPackageBuilder
 
-# Scoring weights — see docs/guide/step_02b_memory_ingestion_retrieval.md.
-# Must sum to 1.0 (stale_penalty is a separate subtractive term, not a weight).
+# weights must sum to 1.0 (stale_penalty is separate, subtractive)
 _WEIGHT_SEMANTIC = 0.35
 _WEIGHT_ENTITY = 0.20
 _WEIGHT_CONFIDENCE = 0.20
@@ -30,9 +23,7 @@ _RECENCY_HORIZON_DAYS = 365
 
 
 def _ensure_aware(dt: datetime) -> datetime:
-    """SQLite (tests) doesn't preserve tzinfo on read even for a
-    DateTime(timezone=True) column — only Postgres does. Everything this
-    app writes is UTC, so a naive value read back is always UTC."""
+    """Treat naive datetimes as UTC (SQLite doesn't preserve tzinfo)."""
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
 

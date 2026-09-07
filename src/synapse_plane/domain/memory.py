@@ -1,6 +1,4 @@
-"""Domain models for persistent memory, entities, relationships, and
-retrieved context. See docs/MEMORY_AND_RAG.md for the design rationale.
-"""
+"""Domain models for persistent memory, entities, relationships, and retrieved context."""
 
 from datetime import datetime
 from typing import Any
@@ -70,9 +68,7 @@ class ExtractedRelationship(BaseModel):
 
 
 class MemoryExtractionResult(BaseModel):
-    """LLM output from the ingestion pipeline — always a proposal, never
-    authoritative: the raw Memory.content is what's actually trusted long
-    term (docs/MEMORY_AND_RAG.md 'important rule')."""
+    """LLM extraction output — a proposal, not authoritative."""
 
     memory_type: MemoryType
     confidence: float = Field(ge=0.0, le=1.0)
@@ -90,6 +86,5 @@ class ContextPackage(BaseModel):
 
     @property
     def provenance(self) -> list[str]:
-        """Human-readable source trail for every retained item — what the UI's
-        'Retrieved Context' panel renders (docs/MEMORY_AND_RAG.md)."""
+        """Source trail for each retained item, for UI display."""
         return [f"{item.memory.memory_type.value}:{item.memory.source}" for item in self.items]

@@ -1,6 +1,4 @@
-"""Shared fixtures for integration tests: real DB (in-memory SQLite),
-fake agents/services only — no live LLM or external API calls.
-"""
+"""Shared fixtures for integration tests: real DB, in-memory SQLite."""
 
 from collections.abc import AsyncGenerator
 

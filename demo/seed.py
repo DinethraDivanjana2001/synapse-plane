@@ -1,8 +1,5 @@
-"""Seed the demo user, 30+ mixed memories, entities/relationships, and the
-agent catalogue. Run with: python -m demo.seed
-
-Uses FakeEmbeddingService — never calls a live embedding API (see
-docs/DECISIONS.md ADR on test/demo determinism).
+"""Seed the demo user, memories, entities/relationships, and agent catalogue.
+Run with: python -m demo.seed
 """
 
 import asyncio
@@ -76,8 +73,7 @@ def build_profile() -> UserProfile:
     )
 
 
-# 30+ memories — deliberately mixed relevant / irrelevant so retrieval
-# (Step 2b) has to actually discriminate, per docs/MEMORY_AND_RAG.md.
+# mixed relevant / irrelevant memories, so retrieval has to discriminate
 SEED_MEMORIES: list[dict[str, object]] = [
     # Relevant to the dinner-with-Maya scenario
     {
@@ -337,8 +333,7 @@ SEED_RELATIONSHIPS: list[tuple[str, str, str]] = [
 
 
 def build_agent_catalogue() -> list[AgentManifest]:
-    """The 5 real agents from docs/AGENT_CATALOGUE.md (v3) — a single API
-    call is never an agent; see docs/PROJECT_CONTEXT.md core rules."""
+    """The 5 real agents in the catalogue."""
     return [
         AgentManifest(
             agent_id="internal-context-intelligence",

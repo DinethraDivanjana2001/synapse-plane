@@ -8,11 +8,7 @@ instruction/
 instructions.txt
 
 # ── Markdown documentation ───────────────────────────────────
-# Private working .md files in docs/ are excluded (internal notes).
-# Only README.md is meant for a general audience; AGENTS.md/CLAUDE.md/
-# PROJECT_CONTEXT.md are already public from earlier commits (AI-tool
-# context an evaluator may want to see) but no *new* .md files should be
-# whitelisted here — docs/LEARNING.md and everything else in docs/ stays local.
+# Only these .md files are public; everything else in docs/ stays local
 *.md
 !README.md
 !AGENTS.md

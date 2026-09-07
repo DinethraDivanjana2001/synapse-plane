@@ -1,6 +1,4 @@
-"""Integration tests for the persistence layer and demo seed data shape.
-Real DB (in-memory SQLite), FakeEmbeddingService — no external I/O.
-"""
+"""Integration tests for the persistence layer and demo seed data shape."""
 
 from datetime import UTC, datetime
 from uuid import uuid4

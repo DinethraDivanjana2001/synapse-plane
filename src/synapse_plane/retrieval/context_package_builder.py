@@ -1,15 +1,10 @@
-"""Assembles the final, token-bounded ContextPackage from scored candidates.
-
-Kept separate from HybridContextRetriever (which does DB access and scoring)
-so the trimming/dedup logic is pure and unit-testable without a database —
-see tests/unit/test_context_retriever.py.
-"""
+"""Assembles the final, token-bounded ContextPackage from scored candidates."""
 
 from datetime import UTC, datetime
 
 from synapse_plane.domain.memory import ContextItem, ContextPackage
 
-_WORDS_TO_TOKENS = 1.3  # rough estimate, matches docs/guide/step_02b
+_WORDS_TO_TOKENS = 1.3
 
 
 def estimate_tokens(text: str) -> int:
@@ -27,11 +22,7 @@ class ContextPackageBuilder:
     ) -> ContextPackage:
         now = datetime.now(UTC)
 
-        # Defensive expiry filter — most candidates are already filtered at
-        # the query level (valid_to IS NULL), but the entity-graph expansion
-        # path doesn't guarantee it, so enforce it here too. SQLite (tests)
-        # doesn't preserve tzinfo on read even for DateTime(timezone=True);
-        # everything this app writes is UTC, so treat naive as UTC.
+        # exclude expired (treat naive datetimes as UTC)
         live_items = [
             item
             for item in scored_items
@@ -39,9 +30,7 @@ class ContextPackageBuilder:
             or (item.memory.valid_to.replace(tzinfo=item.memory.valid_to.tzinfo or UTC) > now)
         ]
 
-        # Deduplicate by memory_id, keeping the highest-scoring occurrence
-        # (a memory can be a candidate via both semantic search and the
-        # entity graph).
+        # dedupe by memory_id, keep highest score
         best_by_memory: dict[str, ContextItem] = {}
         for item in live_items:
             existing = best_by_memory.get(item.memory.memory_id)

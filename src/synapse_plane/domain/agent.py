@@ -1,9 +1,4 @@
-"""Agent manifest domain model.
-
-Field set follows the v3 manifest schema in docs/AGENT_CATALOGUE.md. Only
-manifests with trust_level=approved AND enabled=true may ever be selected
-by the router (docs/AGENTS.md section "Agent catalogue rules").
-"""
+"""Agent manifest domain model."""
 
 from pydantic import BaseModel, Field
 

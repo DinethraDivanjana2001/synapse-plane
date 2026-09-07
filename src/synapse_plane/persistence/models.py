@@ -1,9 +1,4 @@
-"""SQLAlchemy ORM models for all persisted entities.
-
-Table set follows docs/guide/step_02_database_seed.md (v2): memory/entity/
-embedding layer + execution layer. See persistence/types.py for why the
-embedding column is dialect-aware.
-"""
+"""SQLAlchemy ORM models: memory/entity/embedding layer + execution layer."""
 
 from datetime import datetime
 
@@ -14,12 +9,7 @@ from synapse_plane.persistence.types import EmbeddingVector
 
 
 class Base(DeclarativeBase):
-    # Every Mapped[datetime] column becomes TIMESTAMP WITH TIME ZONE. Without
-    # this, SQLAlchemy defaults to a naive TIMESTAMP column — SQLite accepts
-    # timezone-aware Python datetimes into that silently (it doesn't enforce
-    # the distinction), but asyncpg on real Postgres correctly rejects them.
-    # All domain/repository code uses tz-aware UTC datetimes, so the column
-    # must declare timezone=True to match.
+    # datetime columns are timezone-aware (app always writes UTC-aware values)
     type_annotation_map = {datetime: DateTime(timezone=True)}
 
 

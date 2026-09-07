@@ -1,9 +1,4 @@
-"""Memory ingestion pipeline: save raw content first, then derive structure.
-
-LLM extraction output is always a proposal, never authoritative — the raw
-Memory.content is preserved regardless of extraction quality (see
-docs/MEMORY_AND_RAG.md "important rule").
-"""
+"""Memory ingestion: save raw content, then extract structure from it."""
 
 import re
 from datetime import UTC, datetime
@@ -35,8 +30,7 @@ class MemoryExtractorProtocol(Protocol):
 
 
 class LLMMemoryExtractor:
-    """Real extractor — OpenAI JSON mode. Never exercised in tests
-    (NFR-006); FakeMemoryExtractor is used everywhere instead."""
+    """Real extractor — OpenAI JSON mode."""
 
     def __init__(self, llm_client: object, model: str):
         self.llm_client = llm_client
@@ -57,10 +51,7 @@ _STOPWORDS = {"I", "The", "A", "An", "My", "Her", "His", "She", "He", "They"}
 
 
 class FakeMemoryExtractor:
-    """Deterministic, keyword/regex-based extraction — no network calls.
-    Used in all tests and the demo. Deliberately simple: real entity/intent
-    understanding belongs to the Context Intelligence Agent (Step 4), not
-    this pipeline's test double."""
+    """Deterministic keyword/regex-based extraction — no network calls."""
 
     async def extract(self, content: str) -> MemoryExtractionResult:
         lowered = content.lower()
@@ -105,8 +96,7 @@ class MemoryIngestionPipeline:
     async def ingest(self, user_id: str, raw_content: str, source: str) -> Memory:
         now = datetime.now(UTC)
 
-        # 1. Save the raw memory BEFORE any LLM processing — the original is
-        # never lost even if extraction fails or produces garbage.
+        # save raw content first
         memory = Memory(
             memory_id=str(uuid4()),
             user_id=user_id,
@@ -121,13 +111,11 @@ class MemoryIngestionPipeline:
         )
         await self.memory_repo.create(memory)
 
-        # 2-3. Extract structure, update the stored memory with it.
         extraction = await self.extractor.extract(raw_content)
         await self.memory_repo.update_type_and_confidence(
             memory.memory_id, extraction.memory_type, extraction.confidence
         )
 
-        # 4. Entity resolution and linking.
         for entity in extraction.entities:
             canonical_name = entity.name.strip().lower().replace(" ", "_")
             resolved = await self.entity_repo.get_or_create(
@@ -140,7 +128,6 @@ class MemoryIngestionPipeline:
                 resolved.entity_id, memory.memory_id, role=entity.role
             )
 
-        # 5. Embed and store.
         embedding = await self.embedding_service.embed(raw_content)
         await self.memory_repo.store_embedding(
             memory.memory_id, embedding, self.embedding_service.model

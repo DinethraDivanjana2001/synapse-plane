@@ -1,7 +1,4 @@
-"""Repository classes — the only code allowed to touch ORM models directly.
-Everything above this layer speaks Pydantic domain models (docs/AGENTS.md
-layer rules: Persistence stores/loads state, no business logic).
-"""
+"""Repository classes — only place allowed to touch ORM models directly."""
 
 import json
 import math
@@ -39,8 +36,7 @@ class MemorySearchHit:
 
 
 def _cosine_distance(a: list[float], b: list[float]) -> float:
-    """Pure-Python fallback for the SQLite test path — Postgres uses the real
-    pgvector `<=>` operator instead (see MemoryRepository.search_by_embedding)."""
+    """SQLite fallback for cosine distance (Postgres uses pgvector `<=>`)."""
     dot = sum(x * y for x, y in zip(a, b, strict=True))
     norm_a = math.sqrt(sum(x * x for x in a))
     norm_b = math.sqrt(sum(y * y for y in b))
@@ -130,13 +126,7 @@ class MemoryRepository:
     async def search_by_embedding(
         self, user_id: str, query_embedding: list[float], limit: int
     ) -> list[MemorySearchHit]:
-        """Nearest-neighbour search over currently-valid memories.
-
-        Postgres: real pgvector cosine distance (`<=>`), computed in the
-        database. SQLite (tests only, no pgvector extension): fetch the
-        candidate set and compute cosine distance in Python — correct but
-        O(n), fine at seed-data scale, never used in production.
-        """
+        """Nearest-neighbour search over currently-valid memories."""
         dialect = self.session.bind.dialect.name if self.session.bind else "postgresql"
         if dialect == "postgresql":
             result = await self.session.execute(
@@ -218,10 +208,7 @@ class EntityRepository:
         await self.session.flush()
 
     async def find_mentioned(self, user_id: str, text_: str) -> list[Entity]:
-        """Deterministic substring match against the user's own entity
-        catalogue. Good enough for the retriever's entity-graph expansion;
-        deeper NLU belongs to the Context Intelligence Agent (Step 4), not
-        this repository layer."""
+        """Substring match against the user's entity catalogue."""
         result = await self.session.execute(
             select(EntityModel).where(EntityModel.user_id == user_id)
         )
@@ -243,8 +230,7 @@ class EntityRepository:
     async def get_related_memories(
         self, user_id: str, entity_ids: list[str], max_depth: int = 2
     ) -> list[Memory]:
-        """BFS over `relationships` up to max_depth hops from entity_ids,
-        then every memory linked to any entity reached."""
+        """BFS over relationships up to max_depth hops, then linked memories."""
         if not entity_ids:
             return []
 
