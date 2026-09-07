@@ -17,6 +17,7 @@ from synapse_plane.persistence.models import (
     AgentManifestModel,
     ContextRetrievalModel,
     EntityModel,
+    ExternalActionRecordModel,
     MemoryEmbeddingModel,
     MemoryEntityModel,
     MemoryModel,
@@ -399,3 +400,34 @@ class UserProfileRepository:
         if row is None:
             return None
         return UserProfile.model_validate_json(row.profile_json)
+
+
+# Records completed external writes, keyed by idempotency key
+class ExternalActionRecordRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get_by_idempotency_key(
+        self, idempotency_key: str
+    ) -> ExternalActionRecordModel | None:
+        result = await self.session.execute(
+            select(ExternalActionRecordModel).where(
+                ExternalActionRecordModel.idempotency_key == idempotency_key
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def create(
+        self, idempotency_key: str, provider: str, provider_reference_id: str, result_json: str
+    ) -> None:
+        self.session.add(
+            ExternalActionRecordModel(
+                id=str(uuid4()),
+                idempotency_key=idempotency_key,
+                provider=provider,
+                provider_reference_id=provider_reference_id,
+                result_json=result_json,
+                created_at=_now(),
+            )
+        )
+        await self.session.flush()
