@@ -4,10 +4,12 @@ layer rules: Persistence stores/loads state, no business logic).
 """
 
 import json
+import math
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from synapse_plane.domain.agent import AgentManifest
@@ -21,12 +23,30 @@ from synapse_plane.persistence.models import (
     MemoryEmbeddingModel,
     MemoryEntityModel,
     MemoryModel,
+    RelationshipModel,
     UserProfileModel,
 )
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+@dataclass
+class MemorySearchHit:
+    memory: Memory
+    distance: float
+
+
+def _cosine_distance(a: list[float], b: list[float]) -> float:
+    """Pure-Python fallback for the SQLite test path — Postgres uses the real
+    pgvector `<=>` operator instead (see MemoryRepository.search_by_embedding)."""
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(y * y for y in b))
+    if norm_a == 0 or norm_b == 0:
+        return 1.0
+    return 1.0 - dot / (norm_a * norm_b)
 
 
 def _memory_from_row(row: MemoryModel) -> Memory:
@@ -98,6 +118,63 @@ class MemoryRepository:
         )
         return [_memory_from_row(row) for row in result.scalars().all()]
 
+    async def update_type_and_confidence(
+        self, memory_id: str, memory_type: MemoryType, confidence: float
+    ) -> None:
+        row = await self.session.get(MemoryModel, memory_id)
+        if row is not None:
+            row.memory_type = memory_type.value
+            row.confidence = confidence
+            await self.session.flush()
+
+    async def search_by_embedding(
+        self, user_id: str, query_embedding: list[float], limit: int
+    ) -> list[MemorySearchHit]:
+        """Nearest-neighbour search over currently-valid memories.
+
+        Postgres: real pgvector cosine distance (`<=>`), computed in the
+        database. SQLite (tests only, no pgvector extension): fetch the
+        candidate set and compute cosine distance in Python — correct but
+        O(n), fine at seed-data scale, never used in production.
+        """
+        dialect = self.session.bind.dialect.name if self.session.bind else "postgresql"
+        if dialect == "postgresql":
+            result = await self.session.execute(
+                text(
+                    """
+                    SELECT m.id, (e.embedding <=> CAST(:query_vec AS vector)) AS distance
+                    FROM memory_embeddings e
+                    JOIN memories m ON e.memory_id = m.id
+                    WHERE m.user_id = :user_id AND m.valid_to IS NULL
+                    ORDER BY distance ASC
+                    LIMIT :limit
+                    """
+                ),
+                {"query_vec": str(query_embedding), "user_id": user_id, "limit": limit},
+            )
+            rows = result.all()
+            memories_by_id = {m.memory_id: m for m in await self.list_by_user(user_id)}
+            return [
+                MemorySearchHit(memory=memories_by_id[row.id], distance=row.distance)
+                for row in rows
+                if row.id in memories_by_id
+            ]
+
+        # SQLite fallback: brute-force in Python.
+        result = await self.session.execute(
+            select(MemoryModel, MemoryEmbeddingModel.embedding)
+            .join(MemoryEmbeddingModel, MemoryEmbeddingModel.memory_id == MemoryModel.id)
+            .where(MemoryModel.user_id == user_id, MemoryModel.valid_to.is_(None))
+        )
+        hits = [
+            MemorySearchHit(
+                memory=_memory_from_row(row), distance=_cosine_distance(embedding, query_embedding)
+            )
+            for row, embedding in result.all()
+        ]
+        hits.sort(key=lambda h: h.distance)
+        return hits[:limit]
+
 
 class EntityRepository:
     def __init__(self, session: AsyncSession):
@@ -139,6 +216,66 @@ class EntityRepository:
             MemoryEntityModel(id=str(uuid4()), memory_id=memory_id, entity_id=entity_id, role=role)
         )
         await self.session.flush()
+
+    async def find_mentioned(self, user_id: str, text_: str) -> list[Entity]:
+        """Deterministic substring match against the user's own entity
+        catalogue. Good enough for the retriever's entity-graph expansion;
+        deeper NLU belongs to the Context Intelligence Agent (Step 4), not
+        this repository layer."""
+        result = await self.session.execute(
+            select(EntityModel).where(EntityModel.user_id == user_id)
+        )
+        haystack = text_.lower()
+        return [
+            Entity(
+                entity_id=row.id,
+                user_id=row.user_id,
+                entity_type=row.entity_type,  # type: ignore[arg-type]
+                name=row.name,
+                canonical_name=row.canonical_name,
+                metadata=json.loads(row.metadata_json),
+                created_at=row.created_at,
+            )
+            for row in result.scalars().all()
+            if row.canonical_name.replace("_", " ") in haystack or row.name.lower() in haystack
+        ]
+
+    async def get_related_memories(
+        self, user_id: str, entity_ids: list[str], max_depth: int = 2
+    ) -> list[Memory]:
+        """BFS over `relationships` up to max_depth hops from entity_ids,
+        then every memory linked to any entity reached."""
+        if not entity_ids:
+            return []
+
+        frontier = set(entity_ids)
+        visited = set(entity_ids)
+        for _ in range(max_depth):
+            if not frontier:
+                break
+            result = await self.session.execute(
+                select(
+                    RelationshipModel.source_entity_id, RelationshipModel.target_entity_id
+                ).where(
+                    RelationshipModel.user_id == user_id,
+                    (RelationshipModel.source_entity_id.in_(frontier))
+                    | (RelationshipModel.target_entity_id.in_(frontier)),
+                )
+            )
+            next_frontier = set()
+            for source_id, target_id in result.all():
+                for candidate in (source_id, target_id):
+                    if candidate not in visited:
+                        visited.add(candidate)
+                        next_frontier.add(candidate)
+            frontier = next_frontier
+
+        result = await self.session.execute(
+            select(MemoryModel)
+            .join(MemoryEntityModel, MemoryEntityModel.memory_id == MemoryModel.id)
+            .where(MemoryEntityModel.entity_id.in_(visited), MemoryModel.valid_to.is_(None))
+        )
+        return [_memory_from_row(row) for row in result.scalars().unique().all()]
 
 
 class ContextRetrievalRepository:

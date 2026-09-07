@@ -57,6 +57,30 @@ class ContextItem(BaseModel):
     retrieval_reason: str
 
 
+class ExtractedEntity(BaseModel):
+    name: str
+    entity_type: str
+    role: str = "subject"
+
+
+class ExtractedRelationship(BaseModel):
+    source: str
+    relationship_type: str
+    target: str
+
+
+class MemoryExtractionResult(BaseModel):
+    """LLM output from the ingestion pipeline — always a proposal, never
+    authoritative: the raw Memory.content is what's actually trusted long
+    term (docs/MEMORY_AND_RAG.md 'important rule')."""
+
+    memory_type: MemoryType
+    confidence: float = Field(ge=0.0, le=1.0)
+    explicit_or_inferred: ExplicitOrInferred
+    entities: list[ExtractedEntity] = Field(default_factory=list)
+    relationships: list[ExtractedRelationship] = Field(default_factory=list)
+
+
 class ContextPackage(BaseModel):
     items: list[ContextItem]
     intent: str
