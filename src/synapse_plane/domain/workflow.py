@@ -1,6 +1,4 @@
-"""Typed task graph produced by the planning agent and enforced by the
-deterministic PlanValidator. See docs/REQUIREMENTS.md FR-003/FR-004.
-"""
+"""Typed task graph produced by the planner and validated before execution."""
 
 from typing import Any
 
@@ -9,6 +7,7 @@ from pydantic import BaseModel, Field
 from synapse_plane.domain.enums import RiskLevel
 
 
+# One node in the task graph
 class TaskDefinition(BaseModel):
     task_id: str
     task_type: str
@@ -23,6 +22,7 @@ class TaskDefinition(BaseModel):
     timeout_seconds: int = 30
 
 
+# The full task graph for one planned execution
 class WorkflowDefinition(BaseModel):
     workflow_id: str
     goal: str

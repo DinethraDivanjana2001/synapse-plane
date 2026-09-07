@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from synapse_plane.domain.enums import ApprovalStatus
 
 
+# One entry in an execution's timeline
 class ExecutionEvent(BaseModel):
     event_id: str
     execution_id: str
@@ -19,6 +20,7 @@ class ExecutionEvent(BaseModel):
     occurred_at: datetime
 
 
+# Consequential-action proposal awaiting human approval
 class ApprovalProposal(BaseModel):
     proposal_id: str
     execution_id: str

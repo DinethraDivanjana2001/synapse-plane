@@ -11,6 +11,7 @@ def estimate_tokens(text: str) -> int:
     return int(len(text.split()) * _WORDS_TO_TOKENS)
 
 
+# Dedupes, ranks, and trims scored memories into a final ContextPackage
 class ContextPackageBuilder:
     def build(
         self,

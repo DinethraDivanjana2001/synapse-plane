@@ -3,6 +3,7 @@
 from enum import StrEnum
 
 
+# Overall status of one execution
 class ExecutionStatus(StrEnum):
     RECEIVED = "RECEIVED"
     CONTEXT_RETRIEVAL = "CONTEXT_RETRIEVAL"
@@ -18,6 +19,7 @@ class ExecutionStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
+# Status of one task within a workflow
 class TaskStatus(StrEnum):
     PENDING = "PENDING"
     READY = "READY"
@@ -31,6 +33,7 @@ class TaskStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
+# How consequential a task's side effects are
 class RiskLevel(StrEnum):
     READ_ONLY = "READ_ONLY"
     LOW = "LOW"
@@ -38,12 +41,14 @@ class RiskLevel(StrEnum):
     PROHIBITED = "PROHIBITED"
 
 
+# Outcome of one task execution attempt
 class AttemptStatus(StrEnum):
     RUNNING = "RUNNING"
     SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
 
 
+# Category of a stored memory
 class MemoryType(StrEnum):
     EXPLICIT_PROFILE = "explicit_profile"
     EPISODIC = "episodic"
@@ -54,11 +59,13 @@ class MemoryType(StrEnum):
     OUTCOME = "outcome"
 
 
+# Whether a memory was stated directly or inferred
 class ExplicitOrInferred(StrEnum):
     EXPLICIT = "explicit"
     INFERRED = "inferred"
 
 
+# Kind of entity in the knowledge graph
 class EntityType(StrEnum):
     USER = "user"
     PERSON = "person"
@@ -73,12 +80,14 @@ class EntityType(StrEnum):
     ORGANIZATION = "organization"
 
 
+# Whether an agent is approved for use
 class AgentTrustStatus(StrEnum):
     APPROVED = "approved"
     PENDING_REVIEW = "pending_review"
     REVOKED = "revoked"
 
 
+# How complete an agent's integration is
 class AgentImplementationStatus(StrEnum):
     FULLY_IMPLEMENTED = "FULLY_IMPLEMENTED"
     LIVE_EXTERNAL = "LIVE_EXTERNAL"
@@ -90,11 +99,13 @@ class AgentImplementationStatus(StrEnum):
     DISABLED = "disabled"
 
 
+# Whether an agent is built in-house or third-party
 class AgentOwnership(StrEnum):
     INTERNAL = "internal"
     EXTERNAL = "external"
 
 
+# How much an agent's actions can affect the outside world
 class SideEffectLevel(StrEnum):
     READ_ONLY = "READ_ONLY"
     MIXED = "MIXED"
@@ -102,12 +113,14 @@ class SideEffectLevel(StrEnum):
     NONE = "NONE"
 
 
+# Current health of an agent
 class AgentHealthStatus(StrEnum):
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNAVAILABLE = "unavailable"
 
 
+# Classification of why a task attempt failed
 class FailureClass(StrEnum):
     TRANSIENT = "TRANSIENT"
     RATE_LIMITED = "RATE_LIMITED"
@@ -120,6 +133,7 @@ class FailureClass(StrEnum):
     TERMINAL = "TERMINAL"
 
 
+# Status of a human approval request
 class ApprovalStatus(StrEnum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"

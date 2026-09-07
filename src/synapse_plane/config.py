@@ -6,6 +6,7 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
+# App-wide config, loaded from environment / .env
 class Settings(BaseSettings):
     database_url: str  # required, no default — must come from .env/environment
     openai_api_key: str = ""

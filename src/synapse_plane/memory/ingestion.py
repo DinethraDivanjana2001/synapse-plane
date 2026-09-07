@@ -25,6 +25,7 @@ Return JSON matching this schema:
 Note: {content}"""
 
 
+# Interface any memory extractor (real or fake) must implement
 class MemoryExtractorProtocol(Protocol):
     async def extract(self, content: str) -> MemoryExtractionResult: ...
 
@@ -80,6 +81,7 @@ class FakeMemoryExtractor:
         )
 
 
+# Saves raw content, extracts structure, embeds, and stores it
 class MemoryIngestionPipeline:
     def __init__(
         self,

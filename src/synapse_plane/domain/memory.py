@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from synapse_plane.domain.enums import EntityType, ExplicitOrInferred, MemoryType
 
 
+# A single stored piece of personal context
 class Memory(BaseModel):
     memory_id: str
     user_id: str
@@ -27,6 +28,7 @@ class Memory(BaseModel):
         return self.valid_to is None
 
 
+# A named person/place/thing in the knowledge graph
 class Entity(BaseModel):
     entity_id: str
     user_id: str
@@ -37,6 +39,7 @@ class Entity(BaseModel):
     created_at: datetime
 
 
+# A directed edge between two entities
 class Relationship(BaseModel):
     relationship_id: str
     user_id: str
@@ -49,18 +52,21 @@ class Relationship(BaseModel):
     source_memory_id: str | None = None
 
 
+# One scored memory selected by the retriever
 class ContextItem(BaseModel):
     memory: Memory
     relevance_score: float
     retrieval_reason: str
 
 
+# An entity found by the extractor, not yet resolved to a stored Entity
 class ExtractedEntity(BaseModel):
     name: str
     entity_type: str
     role: str = "subject"
 
 
+# A relationship found by the extractor, not yet resolved
 class ExtractedRelationship(BaseModel):
     source: str
     relationship_type: str
@@ -77,6 +83,7 @@ class MemoryExtractionResult(BaseModel):
     relationships: list[ExtractedRelationship] = Field(default_factory=list)
 
 
+# The bounded, ranked memories returned by one retrieval call
 class ContextPackage(BaseModel):
     items: list[ContextItem]
     intent: str

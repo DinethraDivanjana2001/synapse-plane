@@ -7,6 +7,7 @@ from typing import Protocol
 EMBEDDING_DIMENSIONS = 1536
 
 
+# Interface any embedding service (real or fake) must implement
 class EmbeddingServiceProtocol(Protocol):
     model: str
 

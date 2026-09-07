@@ -51,6 +51,7 @@ def score_memory(
     return score - _STALE_PENALTY if is_stale else score
 
 
+# Combines semantic search, explicit preferences, and entity-graph expansion
 class HybridContextRetriever:
     def __init__(
         self,

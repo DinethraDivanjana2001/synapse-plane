@@ -16,6 +16,7 @@ class Base(DeclarativeBase):
 # ── Memory / entity / retrieval layer ────────────────────────────────────
 
 
+# A single stored memory (raw text + metadata)
 class MemoryModel(Base):
     __tablename__ = "memories"
 
@@ -33,6 +34,7 @@ class MemoryModel(Base):
     observed_at: Mapped[datetime]
 
 
+# Vector embedding for one memory, used for semantic search
 class MemoryEmbeddingModel(Base):
     __tablename__ = "memory_embeddings"
 
@@ -43,6 +45,7 @@ class MemoryEmbeddingModel(Base):
     created_at: Mapped[datetime]
 
 
+# A named person/place/thing extracted from memories
 class EntityModel(Base):
     __tablename__ = "entities"
 
@@ -55,6 +58,7 @@ class EntityModel(Base):
     created_at: Mapped[datetime]
 
 
+# A directed edge between two entities (e.g. User PREFERS QuietRestaurants)
 class RelationshipModel(Base):
     __tablename__ = "relationships"
 
@@ -69,6 +73,7 @@ class RelationshipModel(Base):
     source_memory_id: Mapped[str | None] = mapped_column(ForeignKey("memories.id"))
 
 
+# Links a memory to an entity it mentions
 class MemoryEntityModel(Base):
     __tablename__ = "memory_entities"
 
@@ -78,6 +83,7 @@ class MemoryEntityModel(Base):
     role: Mapped[str] = mapped_column(String)
 
 
+# A log of one hybrid-retrieval call for an execution
 class ContextRetrievalModel(Base):
     __tablename__ = "context_retrievals"
 
@@ -94,6 +100,7 @@ class ContextRetrievalModel(Base):
 # ── Agent catalogue ───────────────────────────────────────────────────────
 
 
+# One entry in the agent catalogue (capabilities, trust, health, etc.)
 class AgentManifestModel(Base):
     __tablename__ = "agent_manifests"
 
@@ -125,6 +132,7 @@ class AgentManifestModel(Base):
 # ── Execution layer ───────────────────────────────────────────────────────
 
 
+# The demo user's profile (stored as JSON, one row per user)
 class UserProfileModel(Base):
     __tablename__ = "user_profiles"
 
@@ -135,6 +143,7 @@ class UserProfileModel(Base):
     updated_at: Mapped[datetime]
 
 
+# One user intent being executed, with its overall status
 class ExecutionModel(Base):
     __tablename__ = "executions"
 
@@ -146,6 +155,7 @@ class ExecutionModel(Base):
     updated_at: Mapped[datetime]
 
 
+# One planned/re-planned task DAG version for an execution
 class WorkflowVersionModel(Base):
     __tablename__ = "workflow_versions"
 
@@ -156,6 +166,7 @@ class WorkflowVersionModel(Base):
     created_at: Mapped[datetime]
 
 
+# One task within a workflow version, and its current state
 class TaskModel(Base):
     __tablename__ = "tasks"
 
@@ -170,6 +181,7 @@ class TaskModel(Base):
     updated_at: Mapped[datetime]
 
 
+# A depends-on edge between two tasks
 class TaskDependencyModel(Base):
     __tablename__ = "task_dependencies"
 
@@ -178,6 +190,7 @@ class TaskDependencyModel(Base):
     depends_on_task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"))
 
 
+# One execution attempt of a task by a specific agent
 class TaskAttemptModel(Base):
     __tablename__ = "task_attempts"
 
@@ -192,6 +205,7 @@ class TaskAttemptModel(Base):
     finished_at: Mapped[datetime | None]
 
 
+# A human-approval request/decision for a consequential task
 class ApprovalModel(Base):
     __tablename__ = "approvals"
 
@@ -205,6 +219,7 @@ class ApprovalModel(Base):
     expires_at: Mapped[datetime]
 
 
+# One entry in an execution's audit/event timeline
 class ExecutionEventModel(Base):
     __tablename__ = "execution_events"
 
@@ -218,6 +233,7 @@ class ExecutionEventModel(Base):
     occurred_at: Mapped[datetime]
 
 
+# A record of one tool call made during a task attempt
 class ToolInvocationModel(Base):
     __tablename__ = "tool_invocations"
 
@@ -230,6 +246,7 @@ class ToolInvocationModel(Base):
     invoked_at: Mapped[datetime]
 
 
+# A completed external write, keyed by idempotency key
 class ExternalActionRecordModel(Base):
     __tablename__ = "external_action_records"
 

@@ -11,6 +11,7 @@ from synapse_plane.domain.enums import (
 )
 
 
+# One entry in the trusted agent catalogue
 class AgentManifest(BaseModel):
     agent_id: str
     name: str

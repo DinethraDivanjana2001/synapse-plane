@@ -29,6 +29,7 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+# One result from a nearest-neighbour embedding search
 @dataclass
 class MemorySearchHit:
     memory: Memory
@@ -62,6 +63,7 @@ def _memory_from_row(row: MemoryModel) -> Memory:
     )
 
 
+# CRUD + search for memories and their embeddings
 class MemoryRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -166,6 +168,7 @@ class MemoryRepository:
         return hits[:limit]
 
 
+# CRUD + graph traversal for entities and relationships
 class EntityRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -264,6 +267,7 @@ class EntityRepository:
         return [_memory_from_row(row) for row in result.scalars().unique().all()]
 
 
+# Logs each hybrid-retrieval call for audit/debugging
 class ContextRetrievalRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -294,6 +298,7 @@ class ContextRetrievalRepository:
         return retrieval_id
 
 
+# CRUD for the agent catalogue
 class AgentManifestRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -365,6 +370,7 @@ def _manifest_from_row(row: AgentManifestModel) -> AgentManifest:
     )
 
 
+# CRUD for the demo user profile
 class UserProfileRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
