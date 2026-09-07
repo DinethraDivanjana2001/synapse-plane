@@ -7,14 +7,20 @@ embedding column is dialect-aware.
 
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from synapse_plane.persistence.types import EmbeddingVector
 
 
 class Base(DeclarativeBase):
-    pass
+    # Every Mapped[datetime] column becomes TIMESTAMP WITH TIME ZONE. Without
+    # this, SQLAlchemy defaults to a naive TIMESTAMP column — SQLite accepts
+    # timezone-aware Python datetimes into that silently (it doesn't enforce
+    # the distinction), but asyncpg on real Postgres correctly rejects them.
+    # All domain/repository code uses tz-aware UTC datetimes, so the column
+    # must declare timezone=True to match.
+    type_annotation_map = {datetime: DateTime(timezone=True)}
 
 
 # ── Memory / entity / retrieval layer ────────────────────────────────────

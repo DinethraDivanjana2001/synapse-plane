@@ -16,17 +16,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Dependencies layer ───────────────────────────────────────
+# `pip install -e .` is an EDITABLE install: it needs src/ present at
+# install time to build a working path mapping into site-packages. Copying
+# only pyproject.toml here (to cache this layer separately from source
+# changes) silently produces a broken link — `import synapse_plane` then
+# fails at runtime even though pip reports success. So src/ must be copied
+# before this RUN, not after.
 FROM base AS deps
 
-COPY pyproject.toml ./
-RUN pip install -e "." --no-deps || true
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
 RUN pip install -e "."
 
 # ── API runtime image ────────────────────────────────────────
 FROM deps AS api
 
-# Copy source code
-COPY src/ ./src/
 COPY apps/api/ ./apps/api/
 COPY demo/ ./demo/
 

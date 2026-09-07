@@ -1,8 +1,8 @@
 """initial_schema_with_pgvector
 
-Revision ID: e2202208a27e
+Revision ID: 2bb9cc335a76
 Revises: 
-Create Date: 2026-09-06 10:14:32.557113
+Create Date: 2026-09-07 12:02:02.806952
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import synapse_plane.persistence.types
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'e2202208a27e'
+revision: str = '2bb9cc335a76'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -59,7 +59,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('canonical_name', sa.String(), nullable=False),
     sa.Column('metadata_json', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_entities_canonical_name'), 'entities', ['canonical_name'], unique=False)
@@ -69,8 +69,8 @@ def upgrade() -> None:
     sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('intent_text', sa.Text(), nullable=False),
     sa.Column('status', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_executions_user_id'), 'executions', ['user_id'], unique=False)
@@ -80,7 +80,7 @@ def upgrade() -> None:
     sa.Column('provider', sa.String(), nullable=False),
     sa.Column('provider_reference_id', sa.String(), nullable=False),
     sa.Column('result_json', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_external_action_records_idempotency_key'), 'external_action_records', ['idempotency_key'], unique=True)
@@ -91,12 +91,12 @@ def upgrade() -> None:
     sa.Column('content', sa.Text(), nullable=False),
     sa.Column('confidence', sa.Float(), nullable=False),
     sa.Column('explicit_or_inferred', sa.String(), nullable=False),
-    sa.Column('valid_from', sa.DateTime(), nullable=False),
-    sa.Column('valid_to', sa.DateTime(), nullable=True),
+    sa.Column('valid_from', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('valid_to', sa.DateTime(timezone=True), nullable=True),
     sa.Column('supersedes_fact_id', sa.String(), nullable=True),
     sa.Column('source', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('observed_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('observed_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_memories_user_id'), 'memories', ['user_id'], unique=False)
@@ -104,8 +104,8 @@ def upgrade() -> None:
     sa.Column('id', sa.String(), nullable=False),
     sa.Column('display_name', sa.String(), nullable=False),
     sa.Column('profile_json', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('context_retrievals',
@@ -116,7 +116,7 @@ def upgrade() -> None:
     sa.Column('memories_scanned', sa.Integer(), nullable=False),
     sa.Column('items_returned', sa.Integer(), nullable=False),
     sa.Column('token_estimate', sa.Integer(), nullable=False),
-    sa.Column('retrieved_at', sa.DateTime(), nullable=False),
+    sa.Column('retrieved_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['execution_id'], ['executions.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -128,7 +128,7 @@ def upgrade() -> None:
     sa.Column('agent_id', sa.String(), nullable=True),
     sa.Column('attempt_id', sa.String(), nullable=True),
     sa.Column('payload_json', sa.Text(), nullable=False),
-    sa.Column('occurred_at', sa.DateTime(), nullable=False),
+    sa.Column('occurred_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['execution_id'], ['executions.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -138,7 +138,7 @@ def upgrade() -> None:
     sa.Column('memory_id', sa.String(), nullable=False),
     sa.Column('embedding', synapse_plane.persistence.types.EmbeddingVector(), nullable=False),
     sa.Column('model_name', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['memory_id'], ['memories.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -158,8 +158,8 @@ def upgrade() -> None:
     sa.Column('relationship_type', sa.String(), nullable=False),
     sa.Column('target_entity_id', sa.String(), nullable=False),
     sa.Column('weight', sa.Float(), nullable=False),
-    sa.Column('valid_from', sa.DateTime(), nullable=False),
-    sa.Column('valid_to', sa.DateTime(), nullable=True),
+    sa.Column('valid_from', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('valid_to', sa.DateTime(timezone=True), nullable=True),
     sa.Column('source_memory_id', sa.String(), nullable=True),
     sa.ForeignKeyConstraint(['source_entity_id'], ['entities.id'], ),
     sa.ForeignKeyConstraint(['source_memory_id'], ['memories.id'], ),
@@ -172,7 +172,7 @@ def upgrade() -> None:
     sa.Column('execution_id', sa.String(), nullable=False),
     sa.Column('planning_version', sa.Integer(), nullable=False),
     sa.Column('workflow_json', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['execution_id'], ['executions.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -184,8 +184,8 @@ def upgrade() -> None:
     sa.Column('status', sa.String(), nullable=False),
     sa.Column('selected_agent_id', sa.String(), nullable=True),
     sa.Column('output_json', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['execution_id'], ['executions.id'], ),
     sa.ForeignKeyConstraint(['workflow_version_id'], ['workflow_versions.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -196,9 +196,9 @@ def upgrade() -> None:
     sa.Column('task_id', sa.String(), nullable=False),
     sa.Column('proposal_json', sa.Text(), nullable=False),
     sa.Column('status', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('decided_at', sa.DateTime(), nullable=True),
-    sa.Column('expires_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('decided_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['execution_id'], ['executions.id'], ),
     sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -211,8 +211,8 @@ def upgrade() -> None:
     sa.Column('status', sa.String(), nullable=False),
     sa.Column('failure_class', sa.String(), nullable=True),
     sa.Column('output_json', sa.Text(), nullable=True),
-    sa.Column('started_at', sa.DateTime(), nullable=False),
-    sa.Column('finished_at', sa.DateTime(), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('finished_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -231,7 +231,7 @@ def upgrade() -> None:
     sa.Column('input_json', sa.Text(), nullable=False),
     sa.Column('output_json', sa.Text(), nullable=True),
     sa.Column('idempotency_key', sa.String(), nullable=True),
-    sa.Column('invoked_at', sa.DateTime(), nullable=False),
+    sa.Column('invoked_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['task_attempt_id'], ['task_attempts.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

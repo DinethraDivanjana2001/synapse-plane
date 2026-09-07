@@ -309,6 +309,7 @@ SEED_MEMORIES: list[dict[str, object]] = [
 ]
 
 SEED_ENTITIES: list[dict[str, str]] = [
+    {"type": EntityType.USER.value, "name": "Dinethra", "canonical_name": "user"},
     {"type": EntityType.PERSON.value, "name": "Maya", "canonical_name": "maya"},
     {"type": EntityType.PERSON.value, "name": "Kasun", "canonical_name": "kasun"},
     {"type": EntityType.PERSON.value, "name": "Nadeesha", "canonical_name": "nadeesha"},
@@ -467,7 +468,7 @@ async def seed() -> None:
 
         await profile_repo.upsert(build_profile())
 
-        entity_by_canonical = {"user": USER_ID}
+        entity_by_canonical: dict[str, str] = {}
         for entity_spec in SEED_ENTITIES:
             entity = await entity_repo.get_or_create(
                 user_id=USER_ID,
