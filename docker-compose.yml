@@ -59,6 +59,12 @@ services:
     build:
       context: apps/web
       dockerfile: Dockerfile
+      # host networking during the npm install build step — BuildKit's
+      # isolated build network hits ECONNRESET on this host's Docker Desktop/
+      # WSL2 setup partway through large tarball downloads; host networking
+      # avoids it entirely (verified: default build network fails reliably,
+      # --network=host succeeds reliably)
+      network: host
     container_name: synapse_web
     ports:
       - "3000:3000"
