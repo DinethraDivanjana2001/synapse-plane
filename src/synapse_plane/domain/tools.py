@@ -48,3 +48,10 @@ class CalendarEventResult(BaseModel):
     start_time: datetime
     end_time: datetime
     calendar_id: str
+
+
+# One web search result (Tavily)
+class WebSearchResult(BaseModel):
+    title: str
+    url: str
+    content: str

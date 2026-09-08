@@ -79,6 +79,7 @@ dmypy.json
 *.pfx
 *.crt
 google_credentials.json
+credentials.json
 token.json
 oauth_token.json
 *_secret*

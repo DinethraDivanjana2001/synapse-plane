@@ -380,22 +380,23 @@ def build_agent_catalogue() -> list[AgentManifest]:
             agent_id="external-browser-use",
             name="Browser Use Web Agent",
             ownership=AgentOwnership.EXTERNAL,
-            source_repository="browser-use/browser-use",
+            source_repository="tavily.com (search-based substitute for browser-use/browser-use; "
+            "no Playwright/Chromium install in this environment — see docs/DECISIONS.md)",
             version="0.1.0",
-            description="Live browser agent — discovers restaurants and verifies venue details "
-            "on real websites. Receives only the search goal and location, never full memory.",
+            description="Discovers and verifies restaurant candidates via Tavily web search + "
+            "Gemini extraction. Receives only the search goal and location, never full memory.",
             capabilities=[
                 "web.discover_places",
                 "web.navigate",
                 "web.extract",
                 "web.verify_information",
             ],
-            protocol="subprocess",
+            protocol="http",
             side_effect_level=SideEffectLevel.READ_ONLY,
             trust_status=AgentTrustStatus.APPROVED,
             enabled=True,
             health_status=AgentHealthStatus.DEGRADED,
-            implementation_status=AgentImplementationStatus.LIVE_EXTERNAL,
+            implementation_status=AgentImplementationStatus.CONFIGURED,
             reliability_score=0.75,
             estimated_latency_ms=15000,
             timeout_seconds=60,
@@ -405,10 +406,11 @@ def build_agent_catalogue() -> list[AgentManifest]:
             agent_id="external-open-deep-research",
             name="Open Deep Research Agent",
             ownership=AgentOwnership.EXTERNAL,
-            source_repository="langchain-ai/open_deep_research",
+            source_repository="tavily.com + Gemini synthesis (no langchain-ai/open_deep_research "
+            "LangGraph server running — implemented directly, see docs/DECISIONS.md)",
             version="0.1.0",
             description="Multi-step research agent — investigates destinations and compares "
-            "evidence from multiple sources for the travel use case.",
+            "evidence from multiple Tavily-searched sources for the travel use case.",
             capabilities=[
                 "research.deep",
                 "travel.destination_research",
@@ -419,7 +421,7 @@ def build_agent_catalogue() -> list[AgentManifest]:
             trust_status=AgentTrustStatus.PENDING_REVIEW,
             enabled=False,
             health_status=AgentHealthStatus.UNAVAILABLE,
-            implementation_status=AgentImplementationStatus.REGISTERED_NOT_CONFIGURED,
+            implementation_status=AgentImplementationStatus.CONFIGURED,
             reliability_score=0.70,
             estimated_latency_ms=45000,
             timeout_seconds=60,
@@ -429,24 +431,26 @@ def build_agent_catalogue() -> list[AgentManifest]:
             agent_id="external-openclaw-personal",
             name="OpenClaw Personal Action Agent",
             ownership=AgentOwnership.EXTERNAL,
-            source_repository="openclaw/openclaw",
+            source_repository="Google Calendar API directly (no openclaw/openclaw MCP gateway "
+            "running — see docs/DECISIONS.md)",
             version="0.1.0",
-            description="Personal assistant runtime — checks calendar availability and creates "
-            "approved events via MCP. Consequential writes require a stored ApprovalProposal.",
+            description="Personal assistant agent — checks calendar availability and creates "
+            "approved events via the real Google Calendar API. Consequential writes require a "
+            "stored ApprovalProposal.",
             capabilities=[
                 "personal.calendar_availability",
                 "personal.calendar_create",
                 "personal.task_create",
             ],
-            protocol="mcp",
+            protocol="http",
             side_effect_level=SideEffectLevel.MIXED,
             trust_status=AgentTrustStatus.PENDING_REVIEW,
             enabled=False,
             health_status=AgentHealthStatus.UNAVAILABLE,
-            implementation_status=AgentImplementationStatus.REGISTERED_NOT_CONFIGURED,
+            implementation_status=AgentImplementationStatus.CONFIGURED,
             reliability_score=0.70,
             estimated_latency_ms=2000,
-            tags=["external", "mcp", "calendar"],
+            tags=["external", "calendar", "google"],
         ),
     ]
 

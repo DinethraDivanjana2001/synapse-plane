@@ -9,13 +9,16 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 # App-wide config, loaded from environment / .env
 class Settings(BaseSettings):
     database_url: str  # required, no default — must come from .env/environment
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
+    openai_api_key: str = ""  # holds the Gemini key here — see llm/gemini_client.py
+    openai_model: str = "gpt-4o-mini"  # set to a Gemini model name in .env
+    tavily_api_key: str = ""
+    google_calendar_credentials_path: str = "credentials.json"
+    google_calendar_token_path: str = "token.json"
     embedding_model: str = "text-embedding-3-small"
     app_env: str = "development"
     log_level: str = "INFO"
     demo_mode: bool = True
-    calendar_provider: str = "mock"
+    calendar_provider: str = "mock"  # "mock" | "google"
     places_provider: str = "mock"
     secret_key: str = "dev-secret"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
