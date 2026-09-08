@@ -99,7 +99,7 @@ class AgentExecutor:
             attempt_number += 1
             async with self.db_lock:
                 attempt = await self.attempt_repo.create(
-                    task.task_id, attempt_number, selected.agent_id
+                    f"{execution_id}:{task.task_id}", attempt_number, selected.agent_id
                 )
                 await self.emitter.emit(
                     execution_id,
@@ -117,7 +117,7 @@ class AgentExecutor:
                         attempt.attempt_id, AttemptStatus.SUCCEEDED, output=output.result
                     )
                     await self.task_repo.update_output(
-                        task.task_id, output.result, selected.agent_id
+                        execution_id, task.task_id, output.result, selected.agent_id
                     )
                     await self.emitter.emit(
                         execution_id,
@@ -180,7 +180,7 @@ class AgentExecutor:
         profile: UserProfile,
     ) -> None:
         """Caller (run_task) already holds db_lock."""
-        existing = await self.approval_repo.get_latest_for_task(task.task_id)
+        existing = await self.approval_repo.get_latest_for_task(execution_id, task.task_id)
 
         if existing is None:
             proposal = self.approval_policy.build_proposal(
@@ -191,7 +191,9 @@ class AgentExecutor:
                 profile=profile,
             )
             await self.approval_repo.create(proposal)
-            await self.task_repo.update_status(task.task_id, TaskStatus.WAITING_FOR_APPROVAL)
+            await self.task_repo.update_status(
+                execution_id, task.task_id, TaskStatus.WAITING_FOR_APPROVAL
+            )
             await self.emitter.emit(execution_id, "approval.requested", task_id=task.task_id)
             raise ApprovalRequiredError(proposal.proposal_id)
 

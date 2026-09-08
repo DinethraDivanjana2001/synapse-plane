@@ -1,0 +1,260 @@
+"""Execution endpoints: create, inspect, approve/reject.
+
+create_execution runs synchronously to the first pause point (WAITING_FOR_
+APPROVAL / COMPLETED / FAILED) rather than firing a detached background
+task — simpler and deterministic for a prototype's demo scenarios. A
+production system would return immediately and stream progress instead.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.api.dependencies import get_db
+from synapse_plane.config import get_settings
+from synapse_plane.domain.enums import ApprovalStatus, ExecutionStatus, TaskStatus
+from synapse_plane.observability.event_emitter import EventEmitter
+from synapse_plane.orchestration.wiring import DEMO_USER_ID, build_scheduler, get_planner
+from synapse_plane.persistence.execution_repositories import (
+    ApprovalRepository,
+    ExecutionEventRepository,
+    ExecutionRepository,
+    TaskRepository,
+    WorkflowVersionRepository,
+)
+from synapse_plane.persistence.repositories import AgentManifestRepository, UserProfileRepository
+from synapse_plane.planning.errors import UnsupportedCapabilityError
+from synapse_plane.planning.plan_validator import PlanValidator
+
+router = APIRouter(prefix="/executions", tags=["executions"])
+
+
+class CreateExecutionRequest(BaseModel):
+    intent: str
+    inject_failure: bool = False
+
+
+class TaskSummary(BaseModel):
+    task_id: str
+    status: str
+    selected_agent_id: str | None
+    output: dict | None
+
+
+class ExecutionDetail(BaseModel):
+    execution_id: str
+    status: str
+    intent_text: str
+    tasks: list[TaskSummary]
+    pending_approval: dict | None = None
+    error: dict | None = None
+
+
+class EventSummary(BaseModel):
+    event_type: str
+    task_id: str | None
+    agent_id: str | None
+    payload: dict
+    occurred_at: str
+
+
+async def _load_detail(
+    execution_id: str,
+    execution_repo: ExecutionRepository,
+    task_repo: TaskRepository,
+    approval_repo: ApprovalRepository,
+) -> ExecutionDetail:
+    execution = await execution_repo.get(execution_id)
+    if execution is None:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    tasks = await task_repo.get_by_execution(execution_id)
+
+    pending_approval = None
+    if execution.status == ExecutionStatus.WAITING_FOR_APPROVAL:
+        waiting_task = next((t for t in tasks if t.status == TaskStatus.WAITING_FOR_APPROVAL), None)
+        if waiting_task is not None:
+            proposal = await approval_repo.get_latest_for_task(execution_id, waiting_task.task_id)
+            if proposal is not None:
+                pending_approval = proposal.model_dump(mode="json")
+
+    return ExecutionDetail(
+        execution_id=execution.execution_id,
+        status=execution.status.value,
+        intent_text=execution.intent_text,
+        tasks=[
+            TaskSummary(
+                task_id=t.task_id,
+                status=t.status.value,
+                selected_agent_id=t.selected_agent_id,
+                output=t.output,
+            )
+            for t in tasks
+        ],
+        pending_approval=pending_approval,
+    )
+
+
+@router.post("", response_model=ExecutionDetail, status_code=201)
+async def create_execution(
+    body: CreateExecutionRequest, db: AsyncSession = Depends(get_db)
+) -> ExecutionDetail:
+    settings = get_settings()
+    execution_repo = ExecutionRepository(db)
+    task_repo = TaskRepository(db)
+    approval_repo = ApprovalRepository(db)
+    workflow_version_repo = WorkflowVersionRepository(db)
+    profile_repo = UserProfileRepository(db)
+    agent_repo = AgentManifestRepository(db)
+    emitter = EventEmitter(ExecutionEventRepository(db))
+
+    execution = await execution_repo.create(DEMO_USER_ID, body.intent)
+    await emitter.emit(execution.execution_id, "execution.created")
+
+    profile = await profile_repo.get(DEMO_USER_ID)
+    if profile is None:
+        raise HTTPException(status_code=500, detail="Demo profile not seeded")
+    catalogue = await agent_repo.list_all()
+
+    planner = get_planner(settings)
+    await emitter.emit(execution.execution_id, "planning.started")
+    try:
+        plan = await planner.plan(body.intent, profile, catalogue)
+    except UnsupportedCapabilityError as exc:
+        await execution_repo.update_status(execution.execution_id, ExecutionStatus.FAILED)
+        await emitter.emit(
+            execution.execution_id,
+            "plan.rejected",
+            error_code="UNSUPPORTED_CAPABILITY",
+            capabilities=exc.capabilities,
+        )
+        await db.commit()
+        detail = await _load_detail(
+            execution.execution_id, execution_repo, task_repo, approval_repo
+        )
+        detail.error = {"error_code": "UNSUPPORTED_CAPABILITY", "capabilities": exc.capabilities}
+        return detail
+
+    await emitter.emit(execution.execution_id, "plan.proposed")
+    validation = PlanValidator().validate(plan, catalogue)
+    if not validation.valid:
+        await execution_repo.update_status(execution.execution_id, ExecutionStatus.FAILED)
+        await emitter.emit(
+            execution.execution_id,
+            "plan.rejected",
+            error_code="INVALID_PLAN",
+            errors=validation.errors,
+        )
+        await db.commit()
+        detail = await _load_detail(
+            execution.execution_id, execution_repo, task_repo, approval_repo
+        )
+        detail.error = {"error_code": "INVALID_PLAN", "errors": validation.errors}
+        return detail
+    await emitter.emit(execution.execution_id, "plan.validated")
+
+    version = await workflow_version_repo.create(execution.execution_id, plan)
+    await task_repo.create_from_workflow(execution.execution_id, version.workflow_version_id, plan)
+    await db.commit()
+
+    scheduler = build_scheduler(
+        db, settings, catalogue, profile, inject_failure=body.inject_failure
+    )
+    await scheduler.run(execution.execution_id, plan)
+    await db.commit()
+
+    return await _load_detail(execution.execution_id, execution_repo, task_repo, approval_repo)
+
+
+@router.get("/{execution_id}", response_model=ExecutionDetail)
+async def get_execution(execution_id: str, db: AsyncSession = Depends(get_db)) -> ExecutionDetail:
+    return await _load_detail(
+        execution_id, ExecutionRepository(db), TaskRepository(db), ApprovalRepository(db)
+    )
+
+
+@router.get("/{execution_id}/events", response_model=list[EventSummary])
+async def get_events(execution_id: str, db: AsyncSession = Depends(get_db)) -> list[EventSummary]:
+    events = await ExecutionEventRepository(db).list_by_execution(execution_id)
+    return [
+        EventSummary(
+            event_type=e.event_type,
+            task_id=e.task_id,
+            agent_id=e.agent_id,
+            payload=e.payload,
+            occurred_at=e.occurred_at.isoformat(),
+        )
+        for e in events
+    ]
+
+
+@router.post("/{execution_id}/approvals/{approval_id}/approve", response_model=ExecutionDetail)
+async def approve(
+    execution_id: str, approval_id: str, db: AsyncSession = Depends(get_db)
+) -> ExecutionDetail:
+    settings = get_settings()
+    execution_repo = ExecutionRepository(db)
+    task_repo = TaskRepository(db)
+    approval_repo = ApprovalRepository(db)
+    workflow_version_repo = WorkflowVersionRepository(db)
+    profile_repo = UserProfileRepository(db)
+    agent_repo = AgentManifestRepository(db)
+    emitter = EventEmitter(ExecutionEventRepository(db))
+
+    execution = await execution_repo.get(execution_id)
+    if execution is None:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    if execution.status != ExecutionStatus.WAITING_FOR_APPROVAL:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Execution is not waiting for approval (status={execution.status.value})",
+        )
+
+    proposal = await approval_repo.get(approval_id)
+    if proposal is None or proposal.execution_id != execution_id:
+        raise HTTPException(status_code=404, detail="Approval not found")
+    if proposal.status != ApprovalStatus.PENDING:
+        raise HTTPException(
+            status_code=409, detail=f"Approval is not pending (status={proposal.status.value})"
+        )
+
+    await approval_repo.update_status(approval_id, ApprovalStatus.APPROVED)
+    await emitter.emit(execution_id, "approval.approved", task_id=proposal.task_id)
+    await db.commit()
+
+    profile = await profile_repo.get(DEMO_USER_ID)
+    catalogue = await agent_repo.list_all()
+    version = await workflow_version_repo.get_latest_for_execution(execution_id)
+    if version is None or profile is None:
+        raise HTTPException(status_code=500, detail="No workflow version or profile found")
+
+    scheduler = build_scheduler(db, settings, catalogue, profile)
+    await scheduler.resume_after_approval(execution_id, version.workflow)
+    await db.commit()
+
+    return await _load_detail(execution_id, execution_repo, task_repo, approval_repo)
+
+
+@router.post("/{execution_id}/approvals/{approval_id}/reject", response_model=ExecutionDetail)
+async def reject(
+    execution_id: str, approval_id: str, db: AsyncSession = Depends(get_db)
+) -> ExecutionDetail:
+    execution_repo = ExecutionRepository(db)
+    task_repo = TaskRepository(db)
+    approval_repo = ApprovalRepository(db)
+    emitter = EventEmitter(ExecutionEventRepository(db))
+
+    execution = await execution_repo.get(execution_id)
+    if execution is None:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    proposal = await approval_repo.get(approval_id)
+    if proposal is None or proposal.execution_id != execution_id:
+        raise HTTPException(status_code=404, detail="Approval not found")
+
+    await approval_repo.update_status(approval_id, ApprovalStatus.REJECTED)
+    await task_repo.update_status(execution_id, proposal.task_id, TaskStatus.CANCELLED)
+    await execution_repo.update_status(execution_id, ExecutionStatus.REJECTED)
+    await emitter.emit(execution_id, "approval.rejected", task_id=proposal.task_id)
+    await db.commit()
+
+    return await _load_detail(execution_id, execution_repo, task_repo, approval_repo)

@@ -74,7 +74,9 @@ class DependencyScheduler:
                     return
 
                 for task in ready:
-                    await self.task_repo.update_status(task.task_id, TaskStatus.RUNNING)
+                    await self.task_repo.update_status(
+                        execution_id, task.task_id, TaskStatus.RUNNING
+                    )
 
             await asyncio.gather(
                 *[self._run_single(t, workflow, execution_id, task_outputs) for t in ready]
@@ -86,7 +88,9 @@ class DependencyScheduler:
             await self.emitter.emit(execution_id, "execution.resumed")
             for task in await self.task_repo.get_by_execution(execution_id):
                 if task.status == TaskStatus.WAITING_FOR_APPROVAL:
-                    await self.task_repo.update_status(task.task_id, TaskStatus.PENDING)
+                    await self.task_repo.update_status(
+                        execution_id, task.task_id, TaskStatus.PENDING
+                    )
         await self.run(execution_id, workflow)
 
     def _get_ready_tasks(
@@ -122,12 +126,12 @@ class DependencyScheduler:
             )
             task_outputs[task.task_id] = output
             async with self.db_lock:
-                await self.task_repo.update_status(task.task_id, TaskStatus.SUCCEEDED)
+                await self.task_repo.update_status(execution_id, task.task_id, TaskStatus.SUCCEEDED)
         except ApprovalRequiredError:
             pass  # executor already moved the task to WAITING_FOR_APPROVAL
         except Exception:  # noqa: BLE001 — terminal failure for this task, block downstream
             async with self.db_lock:
-                await self.task_repo.update_status(task.task_id, TaskStatus.FAILED)
+                await self.task_repo.update_status(execution_id, task.task_id, TaskStatus.FAILED)
                 await self._block_downstream(task.task_id, workflow, execution_id)
 
     async def _block_downstream(
@@ -137,7 +141,7 @@ class DependencyScheduler:
         for task in await self.task_repo.get_by_execution(execution_id):
             task_def = self._definition_for(workflow, task.task_id)
             if failed_task_id in task_def.depends_on and task.status == TaskStatus.PENDING:
-                await self.task_repo.update_status(task.task_id, TaskStatus.BLOCKED)
+                await self.task_repo.update_status(execution_id, task.task_id, TaskStatus.BLOCKED)
 
     @staticmethod
     def _definition_for(workflow: WorkflowDefinition, task_id: str) -> TaskDefinition:

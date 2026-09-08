@@ -222,7 +222,7 @@ async def test_workflow_reaches_waiting_for_approval(db_session) -> None:
     create_event_task = next(t for t in tasks if t.task_id == "create_event")
     assert create_event_task.status == TaskStatus.WAITING_FOR_APPROVAL
 
-    proposal = await approval_repo.get_latest_for_task("create_event")
+    proposal = await approval_repo.get_latest_for_task(execution.execution_id, "create_event")
     assert proposal is not None
     assert proposal.status == ApprovalStatus.PENDING
 
@@ -250,7 +250,7 @@ async def test_approval_resumes_workflow_to_completed(db_session) -> None:
     await scheduler.run(execution.execution_id, DINNER_WORKFLOW_PLAN)
     await db_session.commit()
 
-    proposal = await approval_repo.get_latest_for_task("create_event")
+    proposal = await approval_repo.get_latest_for_task(execution.execution_id, "create_event")
     assert proposal is not None
     await approval_repo.update_status(proposal.proposal_id, ApprovalStatus.APPROVED)
     await db_session.commit()

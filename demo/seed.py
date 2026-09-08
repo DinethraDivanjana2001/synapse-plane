@@ -431,12 +431,12 @@ def build_agent_catalogue() -> list[AgentManifest]:
             agent_id="external-openclaw-personal",
             name="OpenClaw Personal Action Agent",
             ownership=AgentOwnership.EXTERNAL,
-            source_repository="Google Calendar API directly (no openclaw/openclaw MCP gateway "
-            "running — see docs/DECISIONS.md)",
+            source_repository="Google Calendar API directly in real mode, mock calendar tools "
+            "in DEMO_MODE (no openclaw/openclaw MCP gateway running — see docs/DECISIONS.md)",
             version="0.1.0",
             description="Personal assistant agent — checks calendar availability and creates "
-            "approved events via the real Google Calendar API. Consequential writes require a "
-            "stored ApprovalProposal.",
+            "approved events. Consequential writes require a stored ApprovalProposal. Falls back "
+            "to reporting unavailable if real mode is active and Google OAuth isn't set up yet.",
             capabilities=[
                 "personal.calendar_availability",
                 "personal.calendar_create",
@@ -444,9 +444,9 @@ def build_agent_catalogue() -> list[AgentManifest]:
             ],
             protocol="http",
             side_effect_level=SideEffectLevel.MIXED,
-            trust_status=AgentTrustStatus.PENDING_REVIEW,
-            enabled=False,
-            health_status=AgentHealthStatus.UNAVAILABLE,
+            trust_status=AgentTrustStatus.APPROVED,
+            enabled=True,
+            health_status=AgentHealthStatus.HEALTHY,
             implementation_status=AgentImplementationStatus.CONFIGURED,
             reliability_score=0.70,
             estimated_latency_ms=2000,

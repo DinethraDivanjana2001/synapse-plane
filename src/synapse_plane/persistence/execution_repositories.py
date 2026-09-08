@@ -108,10 +108,33 @@ class WorkflowVersionRepository:
         await self.session.flush()
         return record
 
+    async def get_latest_for_execution(self, execution_id: str) -> WorkflowVersionRecord | None:
+        result = await self.session.execute(
+            select(WorkflowVersionModel)
+            .where(WorkflowVersionModel.execution_id == execution_id)
+            .order_by(WorkflowVersionModel.created_at.desc())
+        )
+        row = result.scalars().first()
+        if row is None:
+            return None
+        return WorkflowVersionRecord(
+            workflow_version_id=row.id,
+            execution_id=row.execution_id,
+            planning_version=row.planning_version,
+            workflow=WorkflowDefinition.model_validate_json(row.workflow_json),
+            created_at=row.created_at,
+        )
+
+
+def _task_row_id(execution_id: str, task_key: str) -> str:
+    """The same fixed plan (FakePlanner) repeats task_keys across
+    executions, so the row id must combine both to stay unique."""
+    return f"{execution_id}:{task_key}"
+
 
 def _task_from_row(row: TaskModel) -> Task:
     return Task(
-        task_id=row.id,
+        task_id=row.task_key,
         execution_id=row.execution_id,
         workflow_version_id=row.workflow_version_id,
         definition=TaskDefinition.model_validate_json(row.task_definition_json),
@@ -135,9 +158,10 @@ class TaskRepository:
         tasks = []
         for task_def in workflow.tasks:
             row = TaskModel(
-                id=task_def.task_id,
+                id=_task_row_id(execution_id, task_def.task_id),
                 execution_id=execution_id,
                 workflow_version_id=workflow_version_id,
+                task_key=task_def.task_id,
                 task_definition_json=task_def.model_dump_json(),
                 status=TaskStatus.PENDING.value,
                 created_at=now,
@@ -151,7 +175,10 @@ class TaskRepository:
             for dep in task_def.depends_on:
                 self.session.add(
                     TaskDependencyModel(
-                        id=str(uuid4()), task_id=task_def.task_id, depends_on_task_id=dep
+                        id=str(uuid4()),
+                        execution_id=execution_id,
+                        task_key=task_def.task_id,
+                        depends_on_task_key=dep,
                     )
                 )
         await self.session.flush()
@@ -163,21 +190,25 @@ class TaskRepository:
         )
         return [_task_from_row(row) for row in result.scalars().all()]
 
-    async def get(self, task_id: str) -> Task | None:
-        row = await self.session.get(TaskModel, task_id)
+    async def get(self, execution_id: str, task_key: str) -> Task | None:
+        row = await self.session.get(TaskModel, _task_row_id(execution_id, task_key))
         return _task_from_row(row) if row is not None else None
 
-    async def update_status(self, task_id: str, status: TaskStatus) -> None:
-        row = await self.session.get(TaskModel, task_id)
+    async def update_status(self, execution_id: str, task_key: str, status: TaskStatus) -> None:
+        row = await self.session.get(TaskModel, _task_row_id(execution_id, task_key))
         if row is not None:
             row.status = status.value
             row.updated_at = _now()
             await self.session.flush()
 
     async def update_output(
-        self, task_id: str, output: dict, selected_agent_id: str | None = None
+        self,
+        execution_id: str,
+        task_key: str,
+        output: dict,
+        selected_agent_id: str | None = None,
     ) -> None:
-        row = await self.session.get(TaskModel, task_id)
+        row = await self.session.get(TaskModel, _task_row_id(execution_id, task_key))
         if row is not None:
             row.output_json = json.dumps(output)
             if selected_agent_id is not None:
@@ -191,11 +222,13 @@ class TaskAttemptRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, task_id: str, attempt_number: int, agent_id: str) -> TaskAttempt:
+    async def create(self, task_row_id: str, attempt_number: int, agent_id: str) -> TaskAttempt:
+        """task_row_id is the tasks.id FK — the composite f"{execution_id}:
+        {task_key}" form, not the bare workflow-local task_key."""
         now = _now()
         attempt = TaskAttempt(
             attempt_id=str(uuid4()),
-            task_id=task_id,
+            task_id=task_row_id,
             attempt_number=attempt_number,
             agent_id=agent_id,
             status=AttemptStatus.RUNNING,
@@ -204,7 +237,7 @@ class TaskAttemptRepository:
         self.session.add(
             TaskAttemptModel(
                 id=attempt.attempt_id,
-                task_id=task_id,
+                task_id=task_row_id,
                 attempt_number=attempt_number,
                 agent_id=agent_id,
                 status=AttemptStatus.RUNNING.value,
@@ -254,10 +287,12 @@ class ApprovalRepository:
         row = await self.session.get(ApprovalModel, proposal_id)
         return ApprovalProposal.model_validate_json(row.proposal_json) if row is not None else None
 
-    async def get_latest_for_task(self, task_id: str) -> ApprovalProposal | None:
+    async def get_latest_for_task(self, execution_id: str, task_id: str) -> ApprovalProposal | None:
+        # Same fixed plan repeats task_ids across executions (e.g.
+        # "create_event"), so this must be scoped by execution_id too.
         result = await self.session.execute(
             select(ApprovalModel)
-            .where(ApprovalModel.task_id == task_id)
+            .where(ApprovalModel.execution_id == execution_id, ApprovalModel.task_id == task_id)
             .order_by(ApprovalModel.created_at.desc())
         )
         row = result.scalars().first()

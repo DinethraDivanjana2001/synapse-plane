@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from apps.api.routes import agents, health, profile
+from apps.api.routes import agents, executions, health, profile
 from synapse_plane.config import get_settings
 
 settings = get_settings()
@@ -19,3 +19,4 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(agents.router, prefix="/api/v1")
 app.include_router(profile.router, prefix="/api/v1")
+app.include_router(executions.router, prefix="/api/v1")

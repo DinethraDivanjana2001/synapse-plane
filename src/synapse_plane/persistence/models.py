@@ -166,13 +166,17 @@ class WorkflowVersionModel(Base):
     created_at: Mapped[datetime]
 
 
-# One task within a workflow version, and its current state
+# One task within a workflow version, and its current state.
+# id is f"{execution_id}:{task_key}" — task_key (e.g. "resolve_context") is
+# only unique *within* one workflow, and the same fixed plan (FakePlanner)
+# is reused across executions, so task_key alone can't be the primary key.
 class TaskModel(Base):
     __tablename__ = "tasks"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    execution_id: Mapped[str] = mapped_column(ForeignKey("executions.id"))
+    execution_id: Mapped[str] = mapped_column(ForeignKey("executions.id"), index=True)
     workflow_version_id: Mapped[str] = mapped_column(ForeignKey("workflow_versions.id"))
+    task_key: Mapped[str] = mapped_column(String, index=True)
     task_definition_json: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String, default="PENDING")
     selected_agent_id: Mapped[str | None] = mapped_column(String)
@@ -182,12 +186,16 @@ class TaskModel(Base):
 
 
 # A depends-on edge between two tasks
+# Informational only — the scheduler reads depends_on straight from the
+# WorkflowDefinition JSON, not this table. task_key (not tasks.id) is stored
+# since the same task_key repeats across executions; no FK, by design.
 class TaskDependencyModel(Base):
     __tablename__ = "task_dependencies"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"))
-    depends_on_task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"))
+    execution_id: Mapped[str] = mapped_column(ForeignKey("executions.id"), index=True)
+    task_key: Mapped[str] = mapped_column(String)
+    depends_on_task_key: Mapped[str] = mapped_column(String)
 
 
 # One execution attempt of a task by a specific agent
@@ -210,8 +218,11 @@ class ApprovalModel(Base):
     __tablename__ = "approvals"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    execution_id: Mapped[str] = mapped_column(ForeignKey("executions.id"))
-    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"))
+    execution_id: Mapped[str] = mapped_column(ForeignKey("executions.id"), index=True)
+    # workflow-local task_key (e.g. "create_event"), not a tasks.id FK — the
+    # same fixed plan repeats task_keys across executions; scoped by
+    # execution_id above instead (see ApprovalRepository.get_latest_for_task)
+    task_id: Mapped[str] = mapped_column(String)
     proposal_json: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String, default="PENDING")
     created_at: Mapped[datetime]
