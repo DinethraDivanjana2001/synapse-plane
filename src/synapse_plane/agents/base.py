@@ -12,6 +12,7 @@ class AgentInput:
     task_id: str
     execution_id: str
     context: dict[str, Any]
+    required_capability: str = ""
     permissions: list[str] = field(default_factory=list)
     timeout_seconds: int = 30
 

@@ -16,6 +16,7 @@ class RestaurantSearchRequest(BaseModel):
 # One candidate restaurant returned by a places tool
 class RestaurantCandidate(BaseModel):
     name: str
+    address: str = ""
     cuisine: str
     rating: float
     price_level: str

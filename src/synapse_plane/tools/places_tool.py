@@ -6,6 +6,7 @@ from synapse_plane.tools.errors import ToolTimeoutError
 MOCK_RESTAURANTS = [
     RestaurantCandidate(
         name="La Foresta",
+        address="14 Flower Road, Colombo 07",
         cuisine="italian",
         rating=4.6,
         price_level="moderate",
@@ -15,6 +16,7 @@ MOCK_RESTAURANTS = [
     ),
     RestaurantCandidate(
         name="Bella Roma",
+        address="88 Galle Road, Colombo 03",
         cuisine="italian",
         rating=4.1,
         price_level="moderate",
@@ -24,6 +26,7 @@ MOCK_RESTAURANTS = [
     ),
     RestaurantCandidate(
         name="Sakura Garden",
+        address="22 Duplication Road, Colombo 05",
         cuisine="japanese",
         rating=4.4,
         price_level="expensive",
@@ -33,6 +36,7 @@ MOCK_RESTAURANTS = [
     ),
     RestaurantCandidate(
         name="Colombo Spice House",
+        address="5 Marine Drive, Colombo 03",
         cuisine="sri_lankan",
         rating=4.3,
         price_level="cheap",
@@ -45,6 +49,7 @@ MOCK_RESTAURANTS = [
 MOCK_RESTAURANTS_FALLBACK = [
     RestaurantCandidate(
         name="The Quiet Table",
+        address="3 Barnes Place, Colombo 07",
         cuisine="italian",
         rating=4.2,
         price_level="moderate",
