@@ -14,9 +14,13 @@ class IntentPlanner:
         self.settings = settings
 
     async def plan(
-        self, intent: str, profile: UserProfile, catalogue: list[AgentManifest]
+        self,
+        intent: str,
+        profile: UserProfile,
+        catalogue: list[AgentManifest],
+        relevant_facts: list[str] | None = None,
     ) -> WorkflowDefinition:
-        system_prompt = PromptBuilder.build(profile, catalogue)
+        system_prompt = PromptBuilder.build(profile, catalogue, relevant_facts)
 
         response = await self.llm_client.chat.completions.create(  # type: ignore[attr-defined]
             model=self.settings.openai_model,

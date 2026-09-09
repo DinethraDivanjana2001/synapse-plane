@@ -13,7 +13,7 @@
 | `docs/SCOPE_CORRECTION.md` | What v1 got wrong and why |
 | `docs/ARCHITECTURE.md` | Full system design |
 | `docs/MEMORY_AND_RAG.md` | Persistent memory, hybrid RAG, knowledge graph |
-| `docs/AGENT_CATALOGUE.md` | 5 real agents, tools, feasibility checklist |
+| `docs/AGENT_CATALOGUE.md` | 6 real agents, tools, feasibility checklist |
 | `docs/PROGRESS.md` | What is done, what is next |
 
 ### Session-start prompt
@@ -40,13 +40,14 @@ conflict between the requested work and the 3-tier architecture.
 
 ---
 
-## The 5 Real Agents
+## The 6 Real Agents
 
 1. `internal-context-intelligence` — Hybrid RAG retrieval, entity graph, grounded context package
 2. `internal-planning-decision` — LLM-proposed DAG + recommendation synthesis + replanning
 3. `external-browser-use` — Live browser agent for restaurant/venue discovery
 4. `external-open-deep-research` — Multi-step research for travel use case
 5. `external-openclaw-personal` — Personal assistant for calendar actions (MCP)
+6. `external-weather` — Weather checking via Open-Meteo API
 
 ---
 

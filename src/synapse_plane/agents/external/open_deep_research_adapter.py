@@ -17,7 +17,19 @@ Goal: {goal}
 Sources:
 {results}
 
-Return JSON: {{"summary": str, "findings": [str, ...], "sources": [str, ...] (URLs used)}}
+Also extract specific named places worth visiting (attractions, landmarks,
+viewpoints — not restaurants) that are actually mentioned in the sources, each
+with your best-estimate rating. Only include real places named in the sources
+above, not invented ones. If none are named, return an empty list. Tag each
+place with which destination it belongs to (the place this research goal is
+about) — if the goal covers only one destination, use that name for every
+place.
+
+Return JSON: {{"summary": str, "findings": [str, ...], "sources": [str, ...]
+(URLs used), "top_places": [{{"name": str, "destination": str (which
+destination this place is in), "category": str (e.g. "landmark", "viewpoint",
+"museum"), "rating": float (0.0-5.0, estimate 4.0 if unknown), "description":
+str (one sentence)}}, ...]}}
 """
 
 
@@ -29,7 +41,7 @@ class OpenDeepResearchAdapter(BaseAgent):
         self,
         search_client: SearchClientProtocol | None = None,
         llm_client: object | None = None,
-        llm_model: str = "gemini-1.5-flash",
+        llm_model: str = "gemini-3.5-flash-lite",
     ):
         self.search_client = search_client
         self.llm_client = llm_client

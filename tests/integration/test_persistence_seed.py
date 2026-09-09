@@ -143,8 +143,8 @@ async def test_user_profile_upsert_and_get(db_session) -> None:
     assert fetched.display_name == "Dinethra"
 
 
-async def test_seed_module_builds_five_agents_and_thirty_plus_memories() -> None:
+async def test_seed_module_builds_six_agents_and_thirty_plus_memories() -> None:
     from demo.seed import SEED_MEMORIES, build_agent_catalogue
 
     assert len(SEED_MEMORIES) >= 30
-    assert len(build_agent_catalogue()) == 5
+    assert len(build_agent_catalogue()) == 6

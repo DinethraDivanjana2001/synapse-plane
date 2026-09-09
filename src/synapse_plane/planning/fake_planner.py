@@ -113,14 +113,26 @@ TRAVEL_WORKFLOW_PLAN = WorkflowDefinition(
             approval_required=False,
         ),
         TaskDefinition(
+            task_id="check_weather",
+            task_type="agent_task",
+            description="Check the forecast for the candidate destinations",
+            required_capability="weather.check",
+            depends_on=["resolve_context"],
+            input_bindings={"context": "$tasks.resolve_context.output"},
+            output_schema="WeatherForecast@1",
+            risk_level=RiskLevel.READ_ONLY,
+            approval_required=False,
+        ),
+        TaskDefinition(
             task_id="compare_options",
             task_type="agent_task",
             description="Compare destinations and recommend one",
             required_capability="alternatives.compare",
-            depends_on=["research_destinations", "verify_details"],
+            depends_on=["research_destinations", "verify_details", "check_weather"],
             input_bindings={
                 "research": "$tasks.research_destinations.output",
                 "details": "$tasks.verify_details.output",
+                "weather": "$tasks.check_weather.output",
             },
             output_schema="Recommendation@1",
             risk_level=RiskLevel.READ_ONLY,
@@ -134,7 +146,11 @@ _TRAVEL_KEYWORDS = ("trip", "travel", "destination", "kandy", "galle", "vacation
 
 class FakePlanner:
     async def plan(
-        self, intent: str, _profile: UserProfile, _catalogue: list[AgentManifest]
+        self,
+        intent: str,
+        _profile: UserProfile,
+        _catalogue: list[AgentManifest],
+        _relevant_facts: list[str] | None = None,
     ) -> WorkflowDefinition:
         lowered = intent.lower()
         if any(k in lowered for k in _PROHIBITED_KEYWORDS):

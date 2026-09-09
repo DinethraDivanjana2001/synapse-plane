@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.dependencies import get_db
-from synapse_plane.config import get_settings
+from synapse_plane.config import Settings, get_settings
 from synapse_plane.domain.enums import ApprovalStatus, ExecutionStatus, TaskStatus
 from synapse_plane.observability.event_emitter import EventEmitter
 from synapse_plane.orchestration.wiring import DEMO_USER_ID, build_scheduler, get_planner
@@ -32,6 +32,17 @@ router = APIRouter(prefix="/executions", tags=["executions"])
 class CreateExecutionRequest(BaseModel):
     intent: str
     inject_failure: bool = False
+    preferred_time: str | None = None  # "19:00" — overrides the profile default
+
+
+class ApprovalDecisionRequest(BaseModel):
+    """Optional overrides applied before the approved action runs — this is
+    how the user picks a different restaurant or time slot than the one the
+    system proposed."""
+
+    selected_restaurant: dict | None = None
+    selected_start_time: str | None = None
+    selected_end_time: str | None = None
 
 
 class TaskSummary(BaseModel):
@@ -94,6 +105,25 @@ async def _load_detail(
     )
 
 
+async def _fetch_relevant_facts(db: AsyncSession, settings: Settings, intent: str) -> list[str]:
+    """The same retrieval the context.retrieve task runs later, called once
+    up front so the planner can write a person-aware "requirements" string
+    (e.g. Rebecca's known fast-food preference, not the user's own profile
+    default) instead of only ever seeing the aggregate profile."""
+    from synapse_plane.orchestration.wiring import DEMO_USER_ID, get_embedding_service
+    from synapse_plane.persistence.repositories import EntityRepository, MemoryRepository
+    from synapse_plane.retrieval.context_retriever import HybridContextRetriever
+
+    retriever = HybridContextRetriever(
+        memory_repo=MemoryRepository(db),
+        entity_repo=EntityRepository(db),
+        embedding_service=get_embedding_service(settings),
+        settings=settings,
+    )
+    package = await retriever.retrieve(intent, DEMO_USER_ID)
+    return [item.memory.content for item in package.items[:8]]
+
+
 @router.post("", response_model=ExecutionDetail, status_code=201)
 async def create_execution(
     body: CreateExecutionRequest, db: AsyncSession = Depends(get_db)
@@ -116,9 +146,10 @@ async def create_execution(
     catalogue = await agent_repo.list_all()
 
     planner = get_planner(settings)
+    relevant_facts = await _fetch_relevant_facts(db, settings, body.intent)
     await emitter.emit(execution.execution_id, "planning.started")
     try:
-        plan = await planner.plan(body.intent, profile, catalogue)
+        plan = await planner.plan(body.intent, profile, catalogue, relevant_facts)
     except UnsupportedCapabilityError as exc:
         await execution_repo.update_status(execution.execution_id, ExecutionStatus.FAILED)
         await emitter.emit(
@@ -132,6 +163,17 @@ async def create_execution(
             execution.execution_id, execution_repo, task_repo, approval_repo
         )
         detail.error = {"error_code": "UNSUPPORTED_CAPABILITY", "capabilities": exc.capabilities}
+        return detail
+    except Exception as exc:  # noqa: BLE001 — LLM output boundary: never a plan, always FAILED
+        await execution_repo.update_status(execution.execution_id, ExecutionStatus.FAILED)
+        await emitter.emit(
+            execution.execution_id, "plan.rejected", error_code="PLANNING_FAILED", detail=str(exc)
+        )
+        await db.commit()
+        detail = await _load_detail(
+            execution.execution_id, execution_repo, task_repo, approval_repo
+        )
+        detail.error = {"error_code": "PLANNING_FAILED", "errors": [str(exc)]}
         return detail
 
     await emitter.emit(execution.execution_id, "plan.proposed")
@@ -152,12 +194,41 @@ async def create_execution(
         return detail
     await emitter.emit(execution.execution_id, "plan.validated")
 
+    # A plan with only a context.retrieve task is how the real-mode planner
+    # signals "out of scope" (see prompt_builder's SCOPE rules) — reject it
+    # immediately, the same way demo mode's UnsupportedCapabilityError does,
+    # rather than running it to a misleadingly-green COMPLETED.
+    if len(plan.tasks) == 1 and plan.tasks[0].required_capability == "context.retrieve":
+        await execution_repo.update_status(execution.execution_id, ExecutionStatus.FAILED)
+        await emitter.emit(
+            execution.execution_id, "plan.rejected", error_code="UNSUPPORTED_CAPABILITY"
+        )
+        await db.commit()
+        detail = await _load_detail(
+            execution.execution_id, execution_repo, task_repo, approval_repo
+        )
+        detail.error = {
+            "error_code": "UNSUPPORTED_CAPABILITY",
+            "errors": [
+                "This request is outside what SynapsePlane can do. It handles dining "
+                "(finding restaurants, booking a table into your calendar) and travel "
+                "destination comparison. Nothing was booked or changed."
+            ],
+        }
+        return detail
+
     version = await workflow_version_repo.create(execution.execution_id, plan)
     await task_repo.create_from_workflow(execution.execution_id, version.workflow_version_id, plan)
     await db.commit()
 
     scheduler = build_scheduler(
-        db, settings, catalogue, profile, inject_failure=body.inject_failure
+        db,
+        settings,
+        catalogue,
+        profile,
+        inject_failure=body.inject_failure,
+        preferred_time=body.preferred_time,
+        intent=body.intent,
     )
     await scheduler.run(execution.execution_id, plan)
     await db.commit()
@@ -187,9 +258,43 @@ async def get_events(execution_id: str, db: AsyncSession = Depends(get_db)) -> l
     ]
 
 
+async def _apply_user_overrides(
+    execution_id: str, task_repo: TaskRepository, body: ApprovalDecisionRequest
+) -> None:
+    """Rewrite the recommendation / availability task outputs to match what
+    the user actually chose. Task ids are LLM-generated and vary per run, so
+    tasks are matched by output shape rather than by name."""
+    for task in await task_repo.get_by_execution(execution_id):
+        output = task.output
+        if not isinstance(output, dict):
+            continue
+
+        if body.selected_restaurant and "selected" in output:
+            await task_repo.update_output(
+                execution_id,
+                task.task_id,
+                {**output, "selected": body.selected_restaurant},
+                task.selected_agent_id,
+            )
+        elif body.selected_start_time and "start_time" in output:
+            await task_repo.update_output(
+                execution_id,
+                task.task_id,
+                {
+                    **output,
+                    "start_time": body.selected_start_time,
+                    "end_time": body.selected_end_time or output.get("end_time"),
+                },
+                task.selected_agent_id,
+            )
+
+
 @router.post("/{execution_id}/approvals/{approval_id}/approve", response_model=ExecutionDetail)
 async def approve(
-    execution_id: str, approval_id: str, db: AsyncSession = Depends(get_db)
+    execution_id: str,
+    approval_id: str,
+    body: ApprovalDecisionRequest | None = None,
+    db: AsyncSession = Depends(get_db),
 ) -> ExecutionDetail:
     settings = get_settings()
     execution_repo = ExecutionRepository(db)
@@ -216,6 +321,12 @@ async def approve(
         raise HTTPException(
             status_code=409, detail=f"Approval is not pending (status={proposal.status.value})"
         )
+
+    # The create-event task binds its inputs from upstream task outputs, not
+    # from the proposal — so a user's different pick has to be written back
+    # into those outputs before the workflow resumes, or it would be ignored.
+    if body is not None and (body.selected_restaurant or body.selected_start_time):
+        await _apply_user_overrides(execution_id, task_repo, body)
 
     await approval_repo.update_status(approval_id, ApprovalStatus.APPROVED)
     await emitter.emit(execution_id, "approval.approved", task_id=proposal.task_id)

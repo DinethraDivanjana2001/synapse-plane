@@ -28,13 +28,19 @@ services:
       DATABASE_URL: postgresql+asyncpg://synapse:synapse@db:5432/synapse_plane
       APP_ENV: development
       LOG_LEVEL: INFO
-      DEMO_MODE: "true"
-      CALENDAR_PROVIDER: mock
+      # Defaults to demo mode (safe: no live LLM/network calls) unless the
+      # host shell sets DEMO_MODE=false for an explicit real-API test run.
+      DEMO_MODE: "${DEMO_MODE:-true}"
+      # Real Google Calendar requires DEMO_MODE=false too (see wiring.py) and
+      # a one-time interactive `python scripts/setup_google_calendar_auth.py`
+      # on the host — token.json/credentials.json are mounted below.
+      CALENDAR_PROVIDER: "${CALENDAR_PROVIDER:-mock}"
       PLACES_PROVIDER: mock
       CORS_ORIGINS: "http://localhost:3000"
       # Optional — system uses fake planner if absent
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
       SECRET_KEY: ${SECRET_KEY:-local-dev-secret-change-in-production}
     ports:
       - "8000:8000"
@@ -44,6 +50,9 @@ services:
     volumes:
       - ./src:/app/src:ro
       - ./apps/api:/app/apps/api:ro
+      - ./credentials.json:/app/credentials.json:ro
+      # read-write: the token is refreshed and rewritten on expiry
+      - ./token.json:/app/token.json
     command: >
       sh -c "alembic upgrade head &&
              python demo/seed.py &&

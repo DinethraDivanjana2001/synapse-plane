@@ -28,7 +28,12 @@ class FakeLLMClient:
 
 
 class FakeCalendarReadTool:
-    async def get_availability(self, user_id: str, date: str) -> list[TimeSlot]:  # noqa: ARG002
+    async def get_availability(
+        self,
+        user_id: str,  # noqa: ARG002
+        date: str,  # noqa: ARG002
+        meal: str = "dinner",  # noqa: ARG002
+    ) -> list[TimeSlot]:
         now = datetime.now(UTC)
         return [TimeSlot(start_time=now, end_time=now + timedelta(hours=2), is_free=True)]
 

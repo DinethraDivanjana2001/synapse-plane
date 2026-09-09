@@ -108,16 +108,12 @@ def test_binding_referencing_nonexistent_task_rejected() -> None:
 
 
 async def test_fake_planner_returns_dinner_plan_for_dinner_intent() -> None:
-    plan = await FakePlanner().plan(
-        "Arrange dinner with Maya tomorrow", None, CATALOGUE
-    )  # type: ignore[arg-type]
+    plan = await FakePlanner().plan("Arrange dinner with Maya tomorrow", None, CATALOGUE)  # type: ignore[arg-type]
     assert plan.workflow_id == DINNER_WORKFLOW_PLAN.workflow_id
 
 
 async def test_fake_planner_returns_travel_plan_for_travel_intent() -> None:
-    plan = await FakePlanner().plan(
-        "Compare a trip to Kandy and Galle", None, CATALOGUE
-    )  # type: ignore[arg-type]
+    plan = await FakePlanner().plan("Compare a trip to Kandy and Galle", None, CATALOGUE)  # type: ignore[arg-type]
     assert plan.workflow_id == TRAVEL_WORKFLOW_PLAN.workflow_id
 
 

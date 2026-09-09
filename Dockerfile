@@ -21,7 +21,7 @@ FROM base AS deps
 
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
-RUN pip install -e "."
+RUN pip install -e ".[google-calendar]"
 
 # ── API runtime image ────────────────────────────────────────
 FROM deps AS api

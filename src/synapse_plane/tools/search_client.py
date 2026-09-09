@@ -24,7 +24,16 @@ class TavilySearchClient:
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(
                 TAVILY_SEARCH_URL,
-                json={"api_key": self.api_key, "query": query, "max_results": max_results},
+                json={
+                    "api_key": self.api_key,
+                    "query": query,
+                    "max_results": max_results,
+                    # "basic" depth's snippets are often listicle titles with no
+                    # named entities in them (verified: real Colombo restaurant
+                    # search returned only "best X restaurants" list pages) —
+                    # advanced fetches enough content for extraction to work
+                    "search_depth": "advanced",
+                },
             )
             response.raise_for_status()
             data = response.json()

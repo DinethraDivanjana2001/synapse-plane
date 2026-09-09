@@ -7,14 +7,23 @@ one-time interactive step the operator runs locally:
 """
 
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
 from synapse_plane.domain.tools import CalendarEventRequest, CalendarEventResult, TimeSlot
 from synapse_plane.persistence.repositories import ExternalActionRecordRepository
+from synapse_plane.planning.intent_context import MEAL_HOURS
+from synapse_plane.tools.calendar_tool import SLOT_DURATION_HOURS, evening_slot_bounds
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
+
+# Same fixed-offset fix as tools/calendar_tool.py's mock CalendarReadTool: the
+# single demo profile is Asia/Colombo (UTC+5:30, no DST). "7pm" means 7pm
+# there, not 7pm UTC — treating it as UTC would query Google's freebusy API
+# for the wrong window and, worse, create the real calendar event 5.5 hours
+# off from the intended time.
+_DEMO_TIMEZONE = timezone(timedelta(hours=5, minutes=30))
 
 
 class GoogleCalendarAuthRequiredError(Exception):
@@ -71,14 +80,25 @@ class GoogleCalendarTool:
         self.action_repo = action_repo
         self.calendar_id = calendar_id
 
-    async def get_availability(self, user_id: str, date: str) -> list[TimeSlot]:  # noqa: ARG002
-        day = datetime.fromisoformat(date).replace(tzinfo=UTC)
-        window_start = day.replace(hour=9, minute=0, second=0, microsecond=0)
-        window_end = day.replace(hour=21, minute=0, second=0, microsecond=0)
+    async def get_availability(
+        self,
+        user_id: str,  # noqa: ARG002
+        date: str,
+        meal: str = "dinner",
+    ) -> list[TimeSlot]:
+        """Every candidate slot for the requested meal, each marked free or
+        busy against the real calendar — the caller picks; this tool only
+        reports."""
+        hours = MEAL_HOURS.get(meal, MEAL_HOURS["dinner"])
+        local_day = datetime.fromisoformat(date).replace(tzinfo=_DEMO_TIMEZONE)
+        window_start = local_day.replace(hour=hours[0], minute=0, second=0)
+        window_end = local_day.replace(hour=hours[-1], minute=0, second=0) + timedelta(
+            hours=SLOT_DURATION_HOURS
+        )
 
         body = {
-            "timeMin": window_start.isoformat(),
-            "timeMax": window_end.isoformat(),
+            "timeMin": window_start.astimezone(UTC).isoformat(),
+            "timeMax": window_end.astimezone(UTC).isoformat(),
             "items": [{"id": self.calendar_id}],
         }
         response = await asyncio.to_thread(
@@ -86,14 +106,16 @@ class GoogleCalendarTool:
         )
         busy = response["calendars"][self.calendar_id]["busy"]
 
-        candidate_start = day.replace(hour=19, minute=0, second=0, microsecond=0)
-        candidate_end = candidate_start + timedelta(hours=2)
-        is_free = not any(
-            datetime.fromisoformat(b["start"]) < candidate_end
-            and datetime.fromisoformat(b["end"]) > candidate_start
-            for b in busy
-        )
-        return [TimeSlot(start_time=candidate_start, end_time=candidate_end, is_free=is_free)]
+        slots = []
+        for hour in hours:
+            start, end = evening_slot_bounds(date, hour)
+            overlaps = any(
+                datetime.fromisoformat(b["start"]) < end
+                and datetime.fromisoformat(b["end"]) > start
+                for b in busy
+            )
+            slots.append(TimeSlot(start_time=start, end_time=end, is_free=not overlaps))
+        return slots
 
     async def create_event(
         self, event: CalendarEventRequest, idempotency_key: str

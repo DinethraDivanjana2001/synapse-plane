@@ -50,15 +50,22 @@ async def test_get_availability_free_when_no_conflicts() -> None:
     assert slots[0].is_free is True
 
 
-async def test_get_availability_busy_when_conflict_overlaps() -> None:
+async def test_get_availability_marks_only_the_overlapping_slot_busy() -> None:
+    # 19:00-21:00 Asia/Colombo == 13:30-15:30 UTC, so this block collides with
+    # the 19:00 slot only — every other slot that day must stay free.
     service = FakeGoogleCalendarService(
-        busy_blocks=[{"start": "2026-09-10T19:30:00+00:00", "end": "2026-09-10T20:30:00+00:00"}]
+        busy_blocks=[{"start": "2026-09-10T14:00:00+00:00", "end": "2026-09-10T14:30:00+00:00"}]
     )
     tool = GoogleCalendarTool(service, action_repo=None)  # type: ignore[arg-type]
 
     slots = await tool.get_availability("user-1", "2026-09-10")
 
-    assert slots[0].is_free is False
+    # Slots are 2h long and start every hour, so they overlap one another —
+    # a single 14:00-14:30 block legitimately blocks both the 18:00 and 19:00
+    # local starts, and must leave the rest of the evening free.
+    busy_starts = {(s.start_time.hour, s.start_time.minute) for s in slots if not s.is_free}
+    assert busy_starts == {(12, 30), (13, 30)}
+    assert any(s.is_free for s in slots), "later slots stay bookable"
 
 
 async def test_create_event_is_idempotent(db_session) -> None:

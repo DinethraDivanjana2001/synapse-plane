@@ -119,8 +119,8 @@ Any → FAILED | CANCELLED | REJECTED
 | Database | PostgreSQL + pgvector extension |
 | ORM | SQLAlchemy 2.x async + Alembic |
 | Schemas | Pydantic v2 |
-| LLM | OpenAI gpt-4o-mini (via API key) |
-| Embeddings | OpenAI text-embedding-3-small |
+| LLM | OpenAI gpt-4o-mini (via API key) OR Gemini free tier |
+| Embeddings | OpenAI text-embedding-3-small (1536 dimensions) |
 | Vector Search | pgvector (cosine similarity) |
 | External Agent 1 | browser-use (pip install browser-use) |
 | External Agent 2 | open_deep_research (LangGraph server) |
