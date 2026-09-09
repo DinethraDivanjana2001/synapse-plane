@@ -16,23 +16,26 @@ instructions.txt
 !CLAUDE.md
 
 # ── Python ──────────────────────────────────────────────────
+# Anchored to repo root (/) — an unanchored "lib/" or "build/" here would
+# also match apps/web/src/lib/ and any other nested directory of that name,
+# silently excluding real source from every commit (confirmed: it had been
+# doing exactly that to apps/web/src/lib/taskOutput.ts and history.ts).
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
+/build/
+/develop-eggs/
+/downloads/
+/eggs/
+/.eggs/
+/lib/
+/lib64/
+/parts/
+/sdist/
+/var/
+/wheels/
 share/python-wheels/
 *.egg-info/
 .installed.cfg

@@ -61,12 +61,22 @@ export interface ApprovalProposal {
   calendar_id: string;
   description: string;
   status: string;
+  expires_at: string;
+  action_digest?: string;
 }
 
 export interface ExecutionError {
   error_code: string;
   capabilities?: string[];
   errors?: string[];
+}
+
+// What the user actually chose in the approval panel — omitted fields mean
+// "keep what the system proposed".
+export interface ApprovalDecision {
+  selected_restaurant?: Record<string, unknown>;
+  selected_start_time?: string;
+  selected_end_time?: string;
 }
 
 export interface ExecutionDetail {

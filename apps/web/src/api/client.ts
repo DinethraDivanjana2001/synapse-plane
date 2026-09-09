@@ -1,4 +1,10 @@
-import type { AgentManifest, EventSummary, ExecutionDetail, UserProfile } from "./types";
+import type {
+  AgentManifest,
+  ApprovalDecision,
+  EventSummary,
+  ExecutionDetail,
+  UserProfile,
+} from "./types";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const V1 = `${API_BASE}/api/v1`;
@@ -13,12 +19,17 @@ async function json<T>(res: Response): Promise<T> {
 
 export async function createExecution(
   intent: string,
-  injectFailure: boolean
+  injectFailure: boolean,
+  preferredTime?: string
 ): Promise<ExecutionDetail> {
   const res = await fetch(`${V1}/executions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ intent, inject_failure: injectFailure }),
+    body: JSON.stringify({
+      intent,
+      inject_failure: injectFailure,
+      preferred_time: preferredTime || null,
+    }),
   });
   return json(res);
 }
@@ -33,11 +44,14 @@ export async function getEvents(executionId: string): Promise<EventSummary[]> {
 
 export async function approveAction(
   executionId: string,
-  approvalId: string
+  approvalId: string,
+  decision: ApprovalDecision = {}
 ): Promise<ExecutionDetail> {
   return json(
     await fetch(`${V1}/executions/${executionId}/approvals/${approvalId}/approve`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(decision),
     })
   );
 }

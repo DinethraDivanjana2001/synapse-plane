@@ -1,16 +1,33 @@
 import type { EventSummary } from "../api/types";
 
-const ICONS: Record<string, string> = {
-  "execution.created": "→",
-  "planning.started": "○",
-  "plan.proposed": "○",
-  "plan.validated": "✓",
-  "plan.rejected": "✗",
-  "approval.approved": "✓",
-  "approval.rejected": "✗",
-  "execution.completed": "✓",
-  "execution.failed": "✗",
-  "execution.resumed": "→",
+type Mark = "tick" | "cross" | "dot";
+
+function markFor(eventType: string): Mark {
+  if (
+    eventType.includes("failed") ||
+    eventType.includes("rejected") ||
+    eventType === "approval.rejected"
+  ) {
+    return "cross";
+  }
+  if (
+    eventType.includes("succeeded") ||
+    eventType.includes("completed") ||
+    eventType.includes("validated") ||
+    eventType.includes("approved")
+  ) {
+    return "tick";
+  }
+  return "dot";
+}
+
+// Semantic-only: green tick = succeeded, red cross = failed, grey dot =
+// everything in between (started, selected, requested). No category hues —
+// what matters on a timeline is whether each step passed or failed.
+const MARK_STYLE: Record<Mark, { symbol: string; color: string }> = {
+  tick: { symbol: "✓", color: "var(--green)" },
+  cross: { symbol: "✕", color: "var(--red)" },
+  dot: { symbol: "", color: "var(--text-muted)" },
 };
 
 export function EventTimeline({ events }: { events: EventSummary[] }) {
@@ -18,23 +35,30 @@ export function EventTimeline({ events }: { events: EventSummary[] }) {
     return <p className="muted">No events yet.</p>;
   }
   return (
-    <div>
-      {events.map((e, i) => (
-        <div className="timeline-item" key={i}>
-          <span className="timeline-time">
-            {new Date(e.occurred_at).toLocaleTimeString()}
-          </span>
-          <span>{ICONS[e.event_type] ?? "•"}</span>
-          <span>
-            {e.event_type}
-            {e.task_id && <span className="muted"> · {e.task_id}</span>}
-            {e.agent_id && <span className="muted"> · {e.agent_id}</span>}
-            {typeof e.payload?.error_code === "string" && (
-              <span className="muted"> · {e.payload.error_code}</span>
-            )}
-          </span>
-        </div>
-      ))}
+    <div className="timeline">
+      {events.map((e, i) => {
+        const mark = markFor(e.event_type);
+        const style = MARK_STYLE[mark];
+        return (
+          <div className="timeline-row" key={i}>
+            <span className="timeline-time">{new Date(e.occurred_at).toLocaleTimeString()}</span>
+            <span
+              className={`timeline-mark${mark === "dot" ? " timeline-mark-dot" : ""}`}
+              style={{ background: mark === "dot" ? "transparent" : style.color, color: style.color, borderColor: style.color }}
+            >
+              {mark === "dot" ? "" : style.symbol}
+            </span>
+            <span className="timeline-label">
+              {e.event_type}
+              {e.task_id && <span className="muted"> &middot; {e.task_id}</span>}
+              {e.agent_id && <span className="muted"> &middot; {e.agent_id}</span>}
+              {typeof e.payload?.error_code === "string" && (
+                <span className="muted"> &middot; {e.payload.error_code}</span>
+              )}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
