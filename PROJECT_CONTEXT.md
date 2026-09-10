@@ -6,7 +6,7 @@
 
 ## What SynapsePlane is
 
-SynapsePlane is a **persistent-context-aware agentic execution plane** built for Efimind's technical challenge.
+SynapsePlane is a **persistent-context-aware agentic execution plane** built as a technical interview submission.
 
 It receives a natural-language user intent, retrieves relevant historical personal context, decomposes the intent into a typed task graph (DAG), selects suitable agents from a catalogue, executes tasks sequentially or concurrently, passes structured outputs between agents, tracks durable execution state, recovers from failures with retry/fallback/replanning, pauses before consequential actions for human approval, resumes after approval, and records outcomes back into long-term memory.
 

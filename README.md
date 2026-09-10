@@ -15,10 +15,10 @@ catalogue, executes tasks sequentially or in parallel, pauses for human approval
 anything consequential happens, and recovers from failure without ever inventing a fake
 success.
 
-Built as a technical interview submission for **[Efimind](https://efimind.ai)**, this
-project demonstrates the governance and orchestration layer that sits between an AI's
-intent and a real-world action — the part of an agentic system that decides *whether*
-and *how* that action is allowed to happen, not just whether an LLM can produce a plan.
+Built as a technical interview submission, this project demonstrates the governance and
+orchestration layer that sits between an AI's intent and a real-world action — the part
+of an agentic system that decides *whether* and *how* that action is allowed to happen,
+not just whether an LLM can produce a plan.
 
 > **New here?** The [Evaluator Guide](https://claude.ai/code/artifact/0041d886-976b-4f7e-acc8-e4c228ebdd21)
 > is a single page covering architecture, all 6 agents, failure handling, a walkthrough

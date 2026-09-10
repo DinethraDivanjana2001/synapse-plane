@@ -2,14 +2,14 @@
 
 **Status:** Active prototype  
 **Delivery deadline:** Four focused development days  
-**Primary evaluator:** Efimind technical interview panel  
+**Primary evaluator:** Technical interview panel  
 **Repository:** `DinethraDivanjana2001/synapse-plane`
 
 ---
 
 ## What this project is
 
-SynapsePlane is the technical interview submission for Efimind's Graduate AI Engineer role.
+SynapsePlane is a technical interview submission for an AI engineering role.
 The assignment asks for an agentic execution plane: a system that takes a user intent,
 decomposes it into tasks, selects agents from a trusted catalogue, executes tasks
 sequentially or in parallel, passes typed outputs between agents, tracks state durably,
@@ -76,11 +76,11 @@ through the UI to demonstrate that preferences change system behaviour.
 
 ---
 
-## Company context
+## Target domain context
 
-Efimind builds a cognitive augmentation AI system: persistent context from a user's
-thoughts, goals, relationships, and decisions, turned into insights and proactive
+The target product is a cognitive augmentation AI system: persistent context from a
+user's thoughts, goals, relationships, and decisions, turned into insights and proactive
 assistance through AI, knowledge graphs, semantic retrieval, and agentic workflows.
 
-SynapsePlane is directly relevant to this mission because it implements the agentic
-workflow layer that Efimind needs, with proper governance over when AI acts.
+SynapsePlane is directly relevant to that domain because it implements the agentic
+workflow layer such a product needs, with proper governance over when AI acts.
