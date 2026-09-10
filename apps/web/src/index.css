@@ -178,6 +178,23 @@ button {
   margin: 0 0 10px;
 }
 
+.kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  font-size: 13.5px;
+  align-items: start;
+}
+
+.kv dt {
+  color: var(--text-muted);
+  padding-top: 3px;
+}
+
+.kv dd {
+  margin: 0;
+}
+
 .field-label {
   display: block;
   font-size: 13px;
@@ -861,6 +878,58 @@ pre.output-json {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* ---------- intent guidance ---------- */
+
+.guidance-panel {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.guidance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.guidance-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.guidance-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.guidance-hint {
+  font-size: 12px;
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+.guidance-example {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.guidance-example:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft, var(--surface-2));
 }
 
 .chip {

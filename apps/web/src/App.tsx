@@ -6,6 +6,7 @@ import { IntentSubmission } from "./pages/IntentSubmission";
 import { ExecutionDetail } from "./pages/ExecutionDetail";
 import { AgentCatalogue } from "./pages/AgentCatalogue";
 import { ExecutionHistory } from "./pages/ExecutionHistory";
+import { Profile } from "./pages/Profile";
 
 function DashboardPage({ children }: { children: ReactNode }) {
   return (
@@ -34,6 +35,7 @@ export function App() {
         </NavLink>
         <NavLink to="/agents">Agents</NavLink>
         <NavLink to="/history">History</NavLink>
+        <NavLink to="/profile">Profile</NavLink>
       </nav>
       <Routes>
         <Route
@@ -65,6 +67,14 @@ export function App() {
           element={
             <div className="simple-page">
               <ExecutionHistory />
+            </div>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <div className="simple-page">
+              <Profile />
             </div>
           }
         />

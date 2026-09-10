@@ -41,15 +41,23 @@ It receives a natural-language user intent, retrieves relevant historical person
 
 ---
 
-## The 5-Agent Catalogue
+## The 6-Agent Catalogue
+
+**Note (2026-09-10):** the three external agents below were originally planned to run real
+third-party infrastructure (`browser-use`/Playwright, a LangGraph server, an OpenClaw MCP
+gateway). None of that was ever stood up — verified against the actual code — each was
+replaced with a documented substitute that still calls a real external API. Re-planning on
+failure was also planned but never implemented (retry + fallback-agent-routing cover
+failure recovery instead). See `docs/AGENT_CATALOGUE.md` and `docs/DECISIONS.md` for detail.
 
 | Agent ID | Type | Status | Role |
 |----------|------|--------|------|
 | `internal-context-intelligence` | Internal | Implemented | Hybrid RAG retrieval — interprets intent, retrieves relevant memories, traverses entity graph, builds grounded context package |
-| `internal-planning-decision` | Internal | Implemented | Proposes task DAG, compares alternatives, generates grounded recommendations, re-plans on failure |
-| `external-browser-use` | External (browser-use/browser-use) | Live External | Live browser agent — discovers restaurants, verifies venue details on real websites |
-| `external-open-deep-research` | External (langchain-ai/open_deep_research) | Registered | Multi-step research agent — investigates destinations, compares evidence from multiple sources |
-| `external-openclaw-personal` | External (openclaw/openclaw) | Registered | Personal assistant agent — checks calendar availability, creates approved events via MCP |
+| `internal-planning-decision` | Internal | Implemented | Proposes task DAG, compares alternatives, generates grounded recommendations |
+| `external-browser-use` | External (Tavily search + Gemini extraction) | Configured | Discovers restaurants and verifies travel details via real web search, read by an LLM — not real browser automation |
+| `external-open-deep-research` | External (Tavily search + Gemini synthesis) | Configured | Multi-step research agent — investigates destinations, compares evidence from multiple real sources |
+| `external-openclaw-personal` | External (Google Calendar API, OAuth) | Configured | Checks real calendar availability, creates real approved events — not via MCP |
+| `external-weather` | External (Open-Meteo, real mode) | Configured | Real forecasts (no API key needed) in real mode; deterministic canned forecast in demo mode |
 
 ---
 
@@ -119,13 +127,13 @@ Any → FAILED | CANCELLED | REJECTED
 | Database | PostgreSQL + pgvector extension |
 | ORM | SQLAlchemy 2.x async + Alembic |
 | Schemas | Pydantic v2 |
-| LLM | OpenAI gpt-4o-mini (via API key) OR Gemini free tier |
-| Embeddings | OpenAI text-embedding-3-small (1536 dimensions) |
-| Vector Search | pgvector (cosine similarity) |
-| External Agent 1 | browser-use (pip install browser-use) |
-| External Agent 2 | open_deep_research (LangGraph server) |
-| External Agent 3 | OpenClaw (self-hosted, MCP) |
-| Agent Protocol | MCP (tools) + A2A-style adapters (agents) |
+| LLM | Gemini `gemini-3.5-flash-lite`, via an OpenAI-compatible client (`gemini-1.5-flash` and `gemini-2.5-flash-lite` were both tried and are unavailable — Google retires/gates model names over time; verify with a real call before assuming a name works) |
+| Embeddings | **Fake, always** — a deterministic hash-based embedding (`FakeEmbeddingService`), in both demo and real mode. No real embedding provider is wired up. This is the one part of the RAG pipeline that isn't real language understanding yet. |
+| Vector Search | pgvector (cosine similarity), searching the fake embeddings above |
+| External Agent 1 | Tavily search + Gemini extraction (not browser-use — see the agent table above) |
+| External Agent 2 | Tavily search + Gemini synthesis (not a LangGraph server) |
+| External Agent 3 | Google Calendar API, OAuth (not OpenClaw/MCP) |
+| Agent Protocol | Direct HTTP calls to each real API — no MCP gateway or A2A wrapper actually runs |
 | Frontend | React + TypeScript (Vite) |
 | Container | Docker Compose |
 | Tests | Pytest (FakePlanner + FakeEmbedding in tests) |
@@ -144,7 +152,7 @@ src/synapse_plane/orchestration/   Scheduler, executor, dependency resolver
 src/synapse_plane/policies/        Approval policy, retry policy, risk classifier
 src/synapse_plane/agents/internal/ Context Intelligence + Planning Decision agents
 src/synapse_plane/agents/external/ Browser Use, Open Deep Research, OpenClaw adapters
-src/synapse_plane/tools/           Deterministic tool implementations and MCP layer
+src/synapse_plane/tools/           Deterministic tool implementations (no MCP layer exists)
 src/synapse_plane/persistence/     SQLAlchemy ORM, repositories, Alembic
 src/synapse_plane/observability/   Event emitter, structured logging
 apps/api/                          FastAPI application

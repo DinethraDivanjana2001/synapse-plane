@@ -32,6 +32,22 @@ export interface FoodPreferences {
   preferred_dinner_time: string;
 }
 
+export interface TravelPreferences {
+  interests: string[];
+  walking_tolerance: string;
+  pace: string;
+}
+
+export interface ApprovalPolicyConfig {
+  require_for_external_writes: boolean;
+  require_for_financial_actions: boolean;
+}
+
+export interface CalendarConfig {
+  provider: string;
+  calendar_id: string;
+}
+
 export interface UserProfile {
   user_id: string;
   display_name: string;
@@ -40,6 +56,9 @@ export interface UserProfile {
   language: string;
   currency: string;
   food_preferences: FoodPreferences;
+  travel_preferences: TravelPreferences;
+  calendar: CalendarConfig;
+  approval_policy: ApprovalPolicyConfig;
 }
 
 export interface TaskSummary {

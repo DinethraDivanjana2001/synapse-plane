@@ -43,11 +43,18 @@ conflict between the requested work and the 3-tier architecture.
 ## The 6 Real Agents
 
 1. `internal-context-intelligence` — Hybrid RAG retrieval, entity graph, grounded context package
-2. `internal-planning-decision` — LLM-proposed DAG + recommendation synthesis + replanning
-3. `external-browser-use` — Live browser agent for restaurant/venue discovery
-4. `external-open-deep-research` — Multi-step research for travel use case
-5. `external-openclaw-personal` — Personal assistant for calendar actions (MCP)
-6. `external-weather` — Weather checking via Open-Meteo API
+2. `internal-planning-decision` — LLM-proposed DAG + recommendation synthesis (re-planning
+   is a declared capability, not implemented — see `docs/AGENT_CATALOGUE.md`)
+3. `external-browser-use` — Restaurant/venue discovery via real Tavily search + Gemini
+   extraction (not real browser automation — no Playwright/Chromium here, see
+   `docs/DECISIONS.md`)
+4. `external-open-deep-research` — Multi-step research for travel use case, same
+   Tavily+Gemini pattern (not a LangGraph server)
+5. `external-openclaw-personal` — Real Google Calendar API integration in real mode (not
+   an MCP gateway)
+6. `external-weather` — Weather checking via Open-Meteo API (no API key needed) in real
+   mode; a deterministic hash-derived forecast (no network call, unrelated to Open-Meteo)
+   in demo mode
 
 ---
 

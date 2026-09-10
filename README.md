@@ -96,7 +96,7 @@ Dependency Scheduler
 Agent Router (filters catalogue → scores → selects → records reason)
     │  selected agent
     ▼
-Agent Executor → [local agents / provider adapters / MCP tools]
+Agent Executor → [local agents / real API provider adapters — no MCP gateway runs]
     │  typed output
     ▼
 Approval Gate (CONSEQUENTIAL_WRITE tasks pause here)
@@ -129,7 +129,7 @@ synapse-plane/
 │       ├── orchestration/ Scheduler, executor, dependency resolver
 │       ├── policies/     Approval policy, retry policy, risk classifier
 │       ├── agents/       Local agent implementations
-│       ├── tools/        Provider interfaces, MCP layer, mock providers
+│       ├── tools/        Provider interfaces (real APIs, no MCP layer), mock providers
 │       ├── persistence/  SQLAlchemy ORM models, repositories, Alembic config
 │       └── observability/ Event emitter, structured logging
 ├── tests/
