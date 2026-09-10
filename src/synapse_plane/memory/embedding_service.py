@@ -4,7 +4,10 @@ import hashlib
 import random
 from typing import Protocol
 
-EMBEDDING_DIMENSIONS = 1536
+# gemini-embedding-001's real output size (verified with a real call) — the
+# fake embedding must match, since both write into the same fixed-width
+# pgvector column.
+EMBEDDING_DIMENSIONS = 3072
 
 
 # Interface any embedding service (real or fake) must implement
@@ -15,9 +18,10 @@ class EmbeddingServiceProtocol(Protocol):
 
 
 class EmbeddingService:
-    """Real OpenAI-backed implementation."""
+    """Real embedding calls via an OpenAI-compatible client — Gemini's
+    endpoint in this project, verified to serve gemini-embedding-001."""
 
-    def __init__(self, client: object, model: str = "text-embedding-3-small"):
+    def __init__(self, client: object, model: str = "gemini-embedding-001"):
         self.client = client
         self.model = model
 

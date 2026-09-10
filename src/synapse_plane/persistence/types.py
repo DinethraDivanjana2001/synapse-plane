@@ -5,11 +5,11 @@ from sqlalchemy.types import JSON, TypeDecorator
 
 
 class EmbeddingVector(TypeDecorator[list[float]]):
-    """1536-dim embedding vector."""
+    """3072-dim embedding vector — gemini-embedding-001's real output size."""
 
     impl = JSON
     cache_ok = True
-    dimensions = 1536
+    dimensions = 3072
 
     def load_dialect_impl(self, dialect):  # type: ignore[no-untyped-def]
         if dialect.name == "postgresql":

@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from sqlalchemy import delete
 
+from synapse_plane.config import get_settings
 from synapse_plane.domain.agent import AgentManifest
 from synapse_plane.domain.enums import (
     AgentHealthStatus,
@@ -28,7 +29,7 @@ from synapse_plane.domain.profile import (
     TravelPreferences,
     UserProfile,
 )
-from synapse_plane.memory.embedding_service import FakeEmbeddingService
+from synapse_plane.orchestration.wiring import get_embedding_service
 from synapse_plane.persistence.database import get_session_factory
 from synapse_plane.persistence.repositories import (
     AgentManifestRepository,
@@ -818,12 +819,17 @@ async def seed() -> None:
     """
     from synapse_plane.persistence.models import (
         MemoryEmbeddingModel,
+        MemoryEntityModel,
         MemoryModel,
         RelationshipModel,
     )
 
     session_factory = get_session_factory()
-    embedding_service = FakeEmbeddingService()
+    # Real embeddings in real mode, same as everything else — a memory
+    # embedded with the fake service while running for real would never be
+    # findable by a real query embedding (they're different, incompatible
+    # vector spaces even at the same dimension).
+    embedding_service = get_embedding_service(get_settings())
 
     async with session_factory() as session:
         profile_repo = UserProfileRepository(session)
@@ -848,6 +854,16 @@ async def seed() -> None:
             await session.execute(
                 delete(MemoryEmbeddingModel).where(
                     MemoryEmbeddingModel.memory_id.in_(existing_memory_ids)
+                )
+            )
+            # No FK cascade on memory_entities -> memories: deleting a memory
+            # that still has entity links would fail with a constraint
+            # violation, which is exactly what this fix now needs to clean
+            # up (memories are now linked to entities — see the seeding loop
+            # below).
+            await session.execute(
+                delete(MemoryEntityModel).where(
+                    MemoryEntityModel.memory_id.in_(existing_memory_ids)
                 )
             )
             await session.execute(delete(MemoryModel).where(MemoryModel.user_id == USER_ID))
@@ -884,6 +900,22 @@ async def seed() -> None:
             await memory_repo.create(memory)
             embedding = await embedding_service.embed(content)
             await memory_repo.store_embedding(memory.memory_id, embedding, embedding_service.model)
+
+            # Link this memory to every entity it actually names — the same
+            # substring match get_related_memories relies on at query time
+            # (EntityRepository.find_mentioned). Without this, the entity/
+            # relationship graph traversal is real code with nothing to
+            # return: it BFS-expands correctly but the final join against
+            # memory_entities always came back empty (confirmed: 0 rows,
+            # since nothing ever called link_to_memory before this).
+            lowered_content = content.lower()
+            for entity_spec in SEED_ENTITIES:
+                canonical = entity_spec["canonical_name"]
+                name = entity_spec["name"].lower()
+                if canonical.replace("_", " ") in lowered_content or name in lowered_content:
+                    await entity_repo.link_to_memory(
+                        entity_by_canonical[canonical], memory.memory_id, role="mentions"
+                    )
 
         for source_name, rel_type, target_name in SEED_RELATIONSHIPS:
             source_id = entity_by_canonical.get(source_name)

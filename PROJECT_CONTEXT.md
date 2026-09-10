@@ -128,8 +128,8 @@ Any → FAILED | CANCELLED | REJECTED
 | ORM | SQLAlchemy 2.x async + Alembic |
 | Schemas | Pydantic v2 |
 | LLM | Gemini `gemini-3.5-flash-lite`, via an OpenAI-compatible client (`gemini-1.5-flash` and `gemini-2.5-flash-lite` were both tried and are unavailable — Google retires/gates model names over time; verify with a real call before assuming a name works) |
-| Embeddings | **Fake, always** — a deterministic hash-based embedding (`FakeEmbeddingService`), in both demo and real mode. No real embedding provider is wired up. This is the one part of the RAG pipeline that isn't real language understanding yet. |
-| Vector Search | pgvector (cosine similarity), searching the fake embeddings above |
+| Embeddings | **Real in real mode** (as of 2026-09-10) — `gemini-embedding-001`, 3072-dim, via the same endpoint already used for chat. Demo mode keeps a deterministic hash-based fake (`FakeEmbeddingService`) by design, so it stays network-free and reproducible. |
+| Vector Search | pgvector (cosine similarity) — real vectors in real mode, fake in demo mode, per the row above |
 | External Agent 1 | Tavily search + Gemini extraction (not browser-use — see the agent table above) |
 | External Agent 2 | Tavily search + Gemini synthesis (not a LangGraph server) |
 | External Agent 3 | Google Calendar API, OAuth (not OpenClaw/MCP) |

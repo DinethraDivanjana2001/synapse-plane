@@ -57,9 +57,17 @@ def get_planner(settings: Settings) -> PlannerProtocol:
 
 
 def get_embedding_service(settings: Settings) -> EmbeddingServiceProtocol:
-    # No real embedding provider is wired yet (see docs/DECISIONS.md) —
-    # always fake for now, regardless of DEMO_MODE.
-    return FakeEmbeddingService()
+    # Demo mode stays deterministic and network-free, same as the planner and
+    # every other agent. Real mode calls gemini-embedding-001 through the
+    # same OpenAI-compatible client already used for chat — verified with a
+    # real call (3072-dim output, matching the pgvector column).
+    if settings.demo_mode or not settings.openai_api_key:
+        return FakeEmbeddingService()
+
+    from synapse_plane.llm.gemini_client import make_gemini_client
+    from synapse_plane.memory.embedding_service import EmbeddingService
+
+    return EmbeddingService(make_gemini_client(settings), model=settings.embedding_model)
 
 
 def build_agent_registry(

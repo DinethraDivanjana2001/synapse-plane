@@ -14,7 +14,10 @@ class Settings(BaseSettings):
     tavily_api_key: str = ""
     google_calendar_credentials_path: str = "credentials.json"
     google_calendar_token_path: str = "token.json"
-    embedding_model: str = "text-embedding-3-small"
+    # gemini-embedding-001, via the same OpenAI-compatible endpoint as chat —
+    # verified against a real call (3072-dim output). No separate account
+    # needed, unlike the originally-planned OpenAI text-embedding-3-small.
+    embedding_model: str = "gemini-embedding-001"
     app_env: str = "development"
     log_level: str = "INFO"
     demo_mode: bool = True
