@@ -241,7 +241,6 @@ synapse-plane/
 ├── AGENTS.md                        Shared AI coding-assistant context
 ├── CLAUDE.md                        Claude Code specific instructions
 ├── PROJECT_CONTEXT.md               Canonical architecture reference
-├── AI_USAGE.md                      Which AI tools were used, and for what
 ├── docker-compose.yml
 ├── .env.example
 └── pyproject.toml
