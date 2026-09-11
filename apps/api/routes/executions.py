@@ -25,6 +25,7 @@ from synapse_plane.persistence.execution_repositories import (
 from synapse_plane.persistence.repositories import AgentManifestRepository, UserProfileRepository
 from synapse_plane.planning.errors import UnsupportedCapabilityError
 from synapse_plane.planning.plan_validator import PlanValidator
+from synapse_plane.policies.approval_policy import ApprovalPolicy
 
 router = APIRouter(prefix="/executions", tags=["executions"])
 
@@ -320,6 +321,19 @@ async def approve(
     if proposal.status != ApprovalStatus.PENDING:
         raise HTTPException(
             status_code=409, detail=f"Approval is not pending (status={proposal.status.value})"
+        )
+
+    approval_policy = ApprovalPolicy()
+    if approval_policy.is_expired(proposal):
+        await approval_repo.update_status(approval_id, ApprovalStatus.EXPIRED)
+        await db.commit()
+        raise HTTPException(
+            status_code=409, detail="Approval proposal has expired — resubmit the request"
+        )
+    if not approval_policy.verify_digest(proposal):
+        raise HTTPException(
+            status_code=409,
+            detail="Approval proposal failed its integrity check — refusing to execute",
         )
 
     # The create-event task binds its inputs from upstream task outputs, not

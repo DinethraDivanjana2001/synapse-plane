@@ -258,7 +258,7 @@ pytest tests/scenarios/                                   # full stack, mock pro
 pytest --cov=src/synapse_plane --cov-report=term-missing  # with coverage
 ```
 
-All 84 tests run without live LLM or external API credentials — CI runs this same suite
+All 88 tests run without live LLM or external API credentials — CI runs this same suite
 against a real Postgres service container on every push.
 
 ---
