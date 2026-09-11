@@ -1,6 +1,6 @@
 import type { EventSummary } from "../api/types";
 
-type Mark = "tick" | "cross" | "dot";
+type Mark = "tick" | "cross" | "warn" | "dot";
 
 function markFor(eventType: string): Mark {
   if (
@@ -9,6 +9,12 @@ function markFor(eventType: string): Mark {
     eventType === "approval.rejected"
   ) {
     return "cross";
+  }
+  // Recovery events: something didn't go as planned, but the system handled
+  // it without failing the task — worth calling out, distinct from a plain
+  // failure or a plain success.
+  if (eventType === "tool.fallback_used" || eventType === "agent.fallback_selected") {
+    return "warn";
   }
   if (
     eventType.includes("succeeded") ||
@@ -21,12 +27,14 @@ function markFor(eventType: string): Mark {
   return "dot";
 }
 
-// Semantic-only: green tick = succeeded, red cross = failed, grey dot =
-// everything in between (started, selected, requested). No category hues —
-// what matters on a timeline is whether each step passed or failed.
+// Semantic-only: green tick = succeeded, red cross = failed, amber = recovered
+// from a failure, grey dot = everything in between (started, selected,
+// requested). No category hues — what matters on a timeline is whether each
+// step passed, failed, or needed recovery.
 const MARK_STYLE: Record<Mark, { symbol: string; color: string }> = {
   tick: { symbol: "✓", color: "var(--green)" },
   cross: { symbol: "✕", color: "var(--red)" },
+  warn: { symbol: "⟳", color: "var(--amber)" },
   dot: { symbol: "", color: "var(--text-muted)" },
 };
 

@@ -10,6 +10,12 @@ failure, and falls back to PlacesFallbackTool — the task still succeeds on
 the first attempt from the executor's point of view. Executor/router-level
 agent-to-agent fallback (a different agent takes over) is covered
 separately in tests/integration/test_orchestration.py.
+
+Because the failure never escapes the agent, the executor never sees a
+task.failed or agent.fallback_selected event either — without something
+explicit, this recovery would be invisible on the event timeline despite
+being real. The executor emits tool.fallback_used precisely to close that
+gap, by inspecting the successful AgentOutput's tool_calls_made list.
 """
 
 
@@ -38,6 +44,11 @@ async def test_primary_data_source_failure_and_fallback(scenario_client) -> None
     assert (
         event_types.count("task.succeeded") >= 4
     )  # resolve_context, discover_venues, check_calendar, recommend
+    # ...but the recovery still shows up on the timeline explicitly
+    assert "tool.fallback_used" in event_types
+    fallback_event = next(e for e in events if e["event_type"] == "tool.fallback_used")
+    assert fallback_event["task_id"] == "discover_venues"
+    assert fallback_event["payload"]["tool"] == "places_fallback_tool"
 
     approval_id = detail["pending_approval"]["proposal_id"]
     approve_response = await scenario_client.post(

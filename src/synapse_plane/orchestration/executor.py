@@ -119,6 +119,22 @@ class AgentExecutor:
                     await self.task_repo.update_output(
                         execution_id, task.task_id, output.result, selected.agent_id
                     )
+                    # An agent can recover from its own tool failure internally
+                    # (e.g. a search tool timing out, falling back to a backup
+                    # tool) without ever raising — the executor never sees a
+                    # failure to retry or route around. That's real resilience,
+                    # but invisible in the timeline unless called out here.
+                    fallback_tool = next(
+                        (t for t in output.tool_calls_made if "fallback" in t.lower()), None
+                    )
+                    if fallback_tool:
+                        await self.emitter.emit(
+                            execution_id,
+                            "tool.fallback_used",
+                            task_id=task.task_id,
+                            agent_id=selected.agent_id,
+                            tool=fallback_tool,
+                        )
                     await self.emitter.emit(
                         execution_id,
                         "task.succeeded",

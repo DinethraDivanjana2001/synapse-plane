@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { createExecution } from "../api/client";
 import { addHistoryEntry } from "../lib/history";
 
-// Demo-harness-style "Inject Failure" / "Unsupported Intent" buttons were
-// removed — a real product doesn't ship buttons for breaking itself.
-// Unsupported requests are tested the same way a real user would hit one:
-// just type it (see the guidance panel below).
+// The "Unsupported Intent" demo-harness button stays removed — that's tested
+// the same way a real user would hit it: just type it (see the guidance panel
+// below). "Inject Failure" is back, deliberately labeled as a testing-only
+// control rather than styled like a real product feature — it exists to make
+// the retry/fallback recovery path demonstrable and repeatable, not to be
+// something an actual user would ever want to click.
 const STARTER_EXAMPLE = "Find a nice restaurant for dinner with Maya tonight and add it to my calendar";
 
 // What the system can actually do differently depending on exact phrasing —
@@ -44,6 +46,7 @@ export function IntentSubmission() {
   const [intent, setIntent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [injectFailure, setInjectFailure] = useState(false);
 
   function useExample(example: string) {
     setIntent(example);
@@ -53,7 +56,7 @@ export function IntentSubmission() {
     setSubmitting(true);
     setError(null);
     try {
-      const execution = await createExecution(intent, false);
+      const execution = await createExecution(intent, injectFailure);
       addHistoryEntry({
         execution_id: execution.execution_id,
         intent_text: intent,
@@ -91,6 +94,29 @@ export function IntentSubmission() {
       >
         {submitting ? "Executing..." : "Execute Intent"}
       </button>
+
+      <label
+        className="muted"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginTop: 12,
+          fontSize: 12,
+          border: "1px dashed var(--border)",
+          borderRadius: 6,
+          padding: "6px 10px",
+          width: "fit-content",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={injectFailure}
+          onChange={(e) => setInjectFailure(e.target.checked)}
+        />
+        Testing only: force the primary discovery tool to fail, to demonstrate
+        fallback recovery (demo mode only — has no effect in real mode)
+      </label>
 
       <div className="guidance-panel">
         <div className="section-title">What you can ask — and what changes the result</div>
