@@ -6,7 +6,10 @@ task — simpler and deterministic for a prototype's demo scenarios. A
 production system would return immediately and stream progress instead.
 """
 
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
+from openai import APIConnectionError, InternalServerError, RateLimitError
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +29,13 @@ from synapse_plane.persistence.repositories import AgentManifestRepository, User
 from synapse_plane.planning.errors import UnsupportedCapabilityError
 from synapse_plane.planning.plan_validator import PlanValidator
 from synapse_plane.policies.approval_policy import ApprovalPolicy
+from synapse_plane.policies.retry_policy import MAX_RETRIES, RetryPolicy
+
+# Transient, worth retrying — a hiccup talking to the LLM provider, not a bad
+# plan. A malformed/invalid plan (JSON parse failure, schema mismatch) is not
+# in this set on purpose: retrying it would likely just fail the same way,
+# since the underlying request/prompt hasn't changed.
+_RETRYABLE_PLANNING_ERRORS = (APIConnectionError, RateLimitError, InternalServerError)
 
 router = APIRouter(prefix="/executions", tags=["executions"])
 
@@ -125,6 +135,37 @@ async def _fetch_relevant_facts(db: AsyncSession, settings: Settings, intent: st
     return [item.memory.content for item in package.items[:8]]
 
 
+async def _plan_with_retry(
+    planner: object,
+    intent: str,
+    profile: object,
+    catalogue: list[object],
+    relevant_facts: list[str],
+    emitter: EventEmitter,
+    execution_id: str,
+) -> object:
+    """Retries the planning call itself with capped backoff — separate from,
+    and upstream of, task-level retry/fallback. A timeout or rate limit here
+    used to fail the whole execution on the very first attempt, with no
+    recovery at all, unlike every task-execution failure downstream of it."""
+    retry_policy = RetryPolicy()
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            return await planner.plan(intent, profile, catalogue, relevant_facts)  # type: ignore[attr-defined]
+        except _RETRYABLE_PLANNING_ERRORS as exc:
+            if attempt >= MAX_RETRIES:
+                raise
+            await emitter.emit(
+                execution_id,
+                "planning.retry_scheduled",
+                attempt=attempt,
+                error=str(exc),
+            )
+            await asyncio.sleep(retry_policy.backoff_seconds(attempt))
+
+
 @router.post("", response_model=ExecutionDetail, status_code=201)
 async def create_execution(
     body: CreateExecutionRequest, db: AsyncSession = Depends(get_db)
@@ -150,7 +191,15 @@ async def create_execution(
     relevant_facts = await _fetch_relevant_facts(db, settings, body.intent)
     await emitter.emit(execution.execution_id, "planning.started")
     try:
-        plan = await planner.plan(body.intent, profile, catalogue, relevant_facts)
+        plan = await _plan_with_retry(
+            planner,
+            body.intent,
+            profile,
+            catalogue,
+            relevant_facts,
+            emitter,
+            execution.execution_id,
+        )
     except UnsupportedCapabilityError as exc:
         await execution_repo.update_status(execution.execution_id, ExecutionStatus.FAILED)
         await emitter.emit(
