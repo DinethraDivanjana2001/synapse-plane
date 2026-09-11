@@ -13,7 +13,8 @@ SynapsePlane is a technical interview submission for an AI engineering role.
 The assignment asks for an agentic execution plane: a system that takes a user intent,
 decomposes it into tasks, selects agents from a trusted catalogue, executes tasks
 sequentially or in parallel, passes typed outputs between agents, tracks state durably,
-handles failures and replanning, and pauses before consequential actions to get human
+handles failures via retry and fallback routing (automatic re-planning is designed into
+the schema but not yet implemented), and pauses before consequential actions to get human
 approval.
 
 The project demonstrates these capabilities through a restaurant discovery and calendar
